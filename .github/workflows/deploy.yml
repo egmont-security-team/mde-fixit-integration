@@ -1,0 +1,50 @@
+name: Deploy Azure Function
+
+on:
+  workflow_call:
+    inputs:
+      DEPLOY_ENV:
+        description: The environment to deploy to
+        required: true
+        type: string
+
+env:
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: "."
+    
+jobs:
+  deploy_to_azure:
+    runs-on: ubuntu-latest
+
+    if: inputs.DEPLOY_ENV == 'Production' || inputs.DEPLOY_ENV == 'Staging'
+
+    environment: ${{ inputs.DEPLOY_ENV }}
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: python-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip     
+        
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_6627EEBFE4404EDCA5DD8DC354556357 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B39425D02ED1439282E638E77725B734 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_BCB0418919204037A3400B9C8DBBB548 }}
+
+      - name: 'Deploy to Azure Functions'
+        uses: Azure/functions-action@v1
+        id: deploy-to-function
+        with:
+          app-name: 'mde-fixit-integration'
+          slot-name: ${{ inputs.DEPLOY_ENV }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
+          
