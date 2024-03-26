@@ -1,0 +1,17 @@
+[project]
+name = "mde_fixit_integration_DAEKJO"
+version = "0.0.1"
+authors = [
+  { name="DAEKJO", email="daekjo@egmont.com" },
+]
+description = "A FixIT Automation Integration"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/kanerix/mde-fixit-integration"
+Issues = "https://github.com/kanrix/mde-fixit-integration/issues"
