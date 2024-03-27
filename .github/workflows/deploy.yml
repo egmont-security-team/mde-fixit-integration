@@ -32,7 +32,7 @@ jobs:
         run: unzip release.zip     
 
       - name: Display structure of downloaded files
-        run: ls -R
+        run: ls -Ra
         
       - name: Login to Azure
         uses: azure/login@v1
