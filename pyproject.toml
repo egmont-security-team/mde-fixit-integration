@@ -4,7 +4,7 @@ version = "0.0.1"
 authors = [
   { name="DAEKJO", email="daekjo@egmont.com" },
 ]
-description = "A FixIT Automation Integration"
+description = "A MDE FixIT Automation Integration"
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
