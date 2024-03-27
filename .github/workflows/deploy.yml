@@ -28,11 +28,11 @@ jobs:
         with:
           name: mde-fixit-integration 
         
-      - name: Display structure of downloaded files
-        run: ls -R
-
       - name: Unzip artifact for deployment
         run: unzip release.zip     
+
+      - name: Display structure of downloaded files
+        run: ls -R
         
       - name: Login to Azure
         uses: azure/login@v1
