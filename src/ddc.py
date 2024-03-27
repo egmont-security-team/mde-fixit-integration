@@ -4,7 +4,7 @@ import azure.functions as func
 bp = func.Blueprint() 
 
 @bp.timer_trigger(
-    schedule="* */5 * * * *",
+    schedule="* */10 * * * *",
     arg_name="myTimer",
     run_on_startup=False,
     use_monitor=False,
