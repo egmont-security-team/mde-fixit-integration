@@ -26,17 +26,17 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     AZURE_MDE_CLIENT_ID = "000-000-000-000"
     AZURE_MDE_SECRET_VALUE = "000-000-000-000"
 
-    #token: str = get_mde_token(AZURE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE)
-    #devices: list = get_devices(token)
+    token: str = get_mde_token(AZURE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE)
+    devices: list = get_devices(token)
 
-    #if not devices:
-    #    logging.info("Task won't continue as there is no devices to process.")
-    #    return
+    if not devices:
+        logging.info("Task won't continue as there is no devices to process.")
+        return
 
-    #for device in devices:
-    #    continue
+    for device in devices:
+        continue
 
-'''
+
 def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str | None:
     """
     Autheticates with Azure to get a new API key for the Defender Portal.
@@ -77,7 +77,6 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str | None:
         )
 
     return token
-
 
 
 def get_devices(token: str) -> list:
@@ -128,4 +127,3 @@ def get_devices(token: str) -> list:
     )
 
     return devices
-'''
