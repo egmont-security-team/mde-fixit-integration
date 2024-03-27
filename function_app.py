@@ -1,8 +1,8 @@
 import azure.functions as func
-from src.ddc_automation import bp as ddc_bp
-from src.cve_automation import bp as cve_bp
+from src import ddc
+from src import cve
 
 app = func.FunctionApp()
 
-app.register_blueprint(ddc_bp)
-app.register_blueprint(cve_bp)
+app.register_blueprint(ddc.bp)
+app.register_blueprint(cve.bp)
