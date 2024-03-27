@@ -4,9 +4,6 @@ import azure.functions as func
 
 bp = func.Blueprint()
 
-KEY_VAULT = ""
-
-
 @bp.timer_trigger(
     schedule="0 0 8 * * Mon-Fri",
     arg_name="myTimer",
