@@ -66,13 +66,13 @@ def get_devices(token: str) -> list:
         body = res.json()
 
         if status_code != 200:
-            logging.error(
-                "Failed to fetch devices.",
-                extra={
-                    "Status": status_code,
-                    "Content": res.content,
-                },
-            )
+            log_props = {
+                "custom_dimensions": {
+                    "status": status_code,
+                    "content": res.content,
+                }
+            }
+            logging.error("Failed to fetch devices.", extra=log_props)
             break
 
         # Get the new devices from the request.
