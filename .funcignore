@@ -6,3 +6,11 @@ __queuestorage__
 local.settings.json
 test
 .venv
+__pycache__
+.azurite
+.github
+.vscode
+.env
+.env.example
+.gitignore
+README.md
