@@ -26,7 +26,10 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v3
         with:
-          name: python-app
+          name: mde-fixit-integration 
+        
+      - name: Display structure of downloaded files
+        run: ls -R
 
       - name: Unzip artifact for deployment
         run: unzip release.zip     
