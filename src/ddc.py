@@ -7,7 +7,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * Mon-Fri",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=False,
 )
 def ddc_automation(myTimer: func.TimerRequest) -> None:
