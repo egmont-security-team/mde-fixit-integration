@@ -1,4 +1,4 @@
-name: Deploy Azure Function
+name: Deploy Azure Function to Azure Portal
 
 on:
   workflow_call:
@@ -12,7 +12,7 @@ env:
   AZURE_FUNCTIONAPP_PACKAGE_PATH: "."
     
 jobs:
-  deploy_to_azure:
+  deploy-to-azure:
     runs-on: ubuntu-latest
 
     if: inputs.DEPLOY_ENV == 'Production' || inputs.DEPLOY_ENV == 'Staging'

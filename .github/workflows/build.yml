@@ -1,3 +1,4 @@
+name: Build Azure Function artifact 
 
 on:
   workflow_call:
@@ -9,7 +10,7 @@ on:
 
 
 jobs:
-  build:
+  build-and-upload-artifact:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
