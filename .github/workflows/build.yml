@@ -22,7 +22,7 @@ jobs:
 
       - name: Create and start virtual environment
         run: |
-          python -m venv venv
+          python -m venv .venv
           source venv/bin/activate
 
       - name: Install dependencies
@@ -37,4 +37,4 @@ jobs:
           name: mde-fixit-integration
           path: |
             release.zip
-            !venv/
+            !.venv/
