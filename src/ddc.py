@@ -25,25 +25,61 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
 
     logging.info("Started the Data Defender Cleanup task!")
 
-    token: str = get_mde_token()
+    AZURE_TENANT = "000-000-000-000"
+    AZURE_MDE_CLIENT_ID = "000-000-000-000"
+    AZURE_MDE_SECRET_VALUE = "000-000-000-000"
+
+    token: str = get_mde_token(AZURE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE)
     devices: list = get_devices(token)
 
     if not devices:
-        logging.error("No devices found to check.")
+        logging.info("Task won't continue as there is no devices to process.")
+        return
 
     for device in devices:
         continue
 
 
-def get_mde_token() -> str:
+def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str | None:
     """
     Autheticates with Azure to get a new API key for the Defender Portal.
 
     returns:
         str: The bearer token that grants authorization for the Defender Portal API.
+        None: Returns `None` when it fails to get the desired authorization token.
     """
 
-    return "token"
+    res = requests.post(
+        f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token",
+        data={
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": secret_value,
+            "scope": "https://api-eu.securitycenter.microsoft.com/.default",
+        },
+    )
+
+    status_code = res.status_code
+    json = res.json()
+
+    if status_code != 200:
+        custom_dimensions = {"status": status_code, "json": json}
+        logging.error(
+            "Couldn't get Microsoft Defender token from Microsoft authetication flow",
+            extra={"custom_dimensions": custom_dimensions},
+        )
+        return
+
+    token = json.get("access_token")
+
+    if not token:
+        custom_dimensions = {"status": status_code, "json": json}
+        logging.error(
+            "The Microsoft Defender token was not provided in the request even tho is was succelsful",
+            extra={"custom_dimensions": custom_dimensions},
+        )
+
+    return token
 
 
 def get_devices(token: str) -> list:
@@ -63,29 +99,34 @@ def get_devices(token: str) -> list:
         res = requests.get(devices_url, headers={"Authorization": f"Bearer {token}"})
 
         status_code: int = res.status_code
-        body = res.json()
+        json = res.json()
 
         if status_code != 200:
-            log_props = {
-                "custom_dimensions": {
-                    "status": status_code,
-                    "content": res.content,
-                }
+            custom_dimensions = {
+                "status": status_code,
+                "content": res.content,
             }
-            logging.error("Failed to fetch devices.", extra=log_props)
+            logging.error(
+                "Failed to fetch devices from Microsoft Defender API.",
+                extra={"custom_dimensions": custom_dimensions},
+            )
             break
 
         # Get the new devices from the request.
-        new_devices = body.get("value")
-        logging.info(f"Got {len(new_devices)} new devices.")
+        new_devices = json.get("value")
+        logging.info(
+            f"Fetched {len(new_devices)} new devices from Microsoft Defender API."
+        )
 
         devices += new_devices
 
         # The Microsoft Defender API has a limit of 10k devices per request.
         # In case this URL exsist, this means that more devices can be fetched.
         # This URL given here can be used to fetch the next devices.
-        devices_url = body.get("@odata.nextLink")
+        devices_url = json.get("@odata.nextLink")
 
-    logging.info(f"Got a total of {len(devices)} devices from Defender Portal API.")
+    logging.info(
+        f"Fetched a total of {len(devices)} devices from Microsoft Defender API."
+    )
 
     return devices
