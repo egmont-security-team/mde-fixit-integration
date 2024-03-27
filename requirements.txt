@@ -5,5 +5,4 @@
 azure-functions
 azure-identity
 azure-keyvault-secrets
-opencensus-ext-azure
 requests
