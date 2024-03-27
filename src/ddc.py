@@ -3,6 +3,9 @@ import requests
 import azure.functions as func
 
 
+bp = func.Blueprint()
+
+
 def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str | None:
     """
     Autheticates with Azure to get a new API key for the Defender Portal.
@@ -93,9 +96,6 @@ def get_devices(token: str) -> list:
     )
 
     return devices
-
-
-bp = func.Blueprint()
 
 
 @bp.timer_trigger(
