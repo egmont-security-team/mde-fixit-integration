@@ -4,6 +4,7 @@ import azure.functions as func
 
 bp = func.Blueprint()
 
+
 @bp.timer_trigger(
     schedule="0 0 8 * * Mon-Fri",
     arg_name="myTimer",
@@ -26,7 +27,9 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     AZURE_MDE_CLIENT_ID = "000-000-000-000"
     AZURE_MDE_SECRET_VALUE = "000-000-000-000"
 
-    token: str = get_mde_token(AZURE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE)
+    token: str = get_mde_token(
+        AZURE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE
+    )
     devices: list = get_devices(token)
 
     if not devices:
