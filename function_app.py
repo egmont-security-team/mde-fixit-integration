@@ -4,5 +4,5 @@ from src import cve
 
 app = func.FunctionApp()
 
-app.register_blueprint(ddc.bp)
+# app.register_blueprint(ddc.bp)
 app.register_blueprint(cve.bp)
