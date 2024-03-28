@@ -47,7 +47,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     if not key_vault_name:
         logging.critical(
             """
-            Did not find envrionment variable \"KEY_VAULT_NAME\". Please set this 
+            Did not find environment variable \"KEY_VAULT_NAME\". Please set this 
             in \"local.settings.json\" or in the application settings in Azure.
             """
         )
@@ -101,7 +101,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     devices_sorted_by_name = []
 
     logging.info(
-        "Start removing FixIt tags that refrence a completed request from devices in the Micorsoft Defender portal."
+        "Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal."
     )
 
     removed_fixit_tags = 0
@@ -148,7 +148,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             del devices_sorted_by_name[device_name]
 
     logging.info(
-        'Start adding "ZZZ" to duplicate devices in the Micorsoft Defender portal.'
+        'Start adding "ZZZ" to duplicate devices in the Microsoft Defender portal.'
     )
 
     duplicate_devices_tagged = 0
@@ -167,17 +167,17 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
                 duplicate_devices_tagged += 1
 
     logging.info(
-        f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defende portal."
+        f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defender portal."
     )
 
 
 def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
     """
-    Autheticates with Azure to get a new API key for the Defender Portal.
+    Authenticates with Azure to get a new API key for the Microsoft Defender Portal.
 
     params:
         tenant:
-            str: The tenant of the MDE envrionment.
+            str: The tenant of the MDE environment.
         client_id:
             str: TODO: describe
         secret_value:
@@ -203,7 +203,7 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
     if status_code != 200:
         custom_dimensions = {"status": status_code, "body": res.content}
         logging.error(
-            "Couldn't get Microsoft Defender token from Microsoft authetication flow",
+            "Couldn't get Microsoft Defender token from Microsoft authentication flow.",
             extra={"custom_dimensions": custom_dimensions},
         )
         return ""
@@ -213,7 +213,7 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
     if not token:
         custom_dimensions = {"status": status_code, "body": res.content}
         logging.error(
-            "The Microsoft Defender token was not provided in the request even tho is was succelsful",
+            "The Microsoft Defender token was not provided in the request even tho is was successful.",
             extra={"custom_dimensions": custom_dimensions},
         )
 
@@ -260,7 +260,7 @@ def get_devices(token: str) -> list:
         devices += new_devices
 
         # The Microsoft Defender API has a limit of 10k devices per request.
-        # In case this URL exsist, this means that more devices can be fetched.
+        # In case this URL exists, this means that more devices can be fetched.
         # This URL given here can be used to fetch the next devices.
         devices_url = json.get("@odata.nextLink")
 

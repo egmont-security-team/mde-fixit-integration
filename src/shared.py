@@ -7,7 +7,7 @@ import requests
 def get_fixit_request_id_from_tag(tag: str) -> str:
     """
     Gets the FixIt request ID from a given tag if it is a prober FixIt tag.
-    This uses reqular expression to determain if the tag is prober.
+    This uses regular expression to determine if the tag is prober.
 
     params:
         tag:
@@ -17,9 +17,9 @@ def get_fixit_request_id_from_tag(tag: str) -> str:
         str: The FixIt request ID from the tag.
     """
 
-    # If this reqular expressoin does not match, it is not a FixIt tag.
-    # This also takes care of human error bu checking for spaces between
-    # the # and the numbers
+    # If this regular expression does not match, it is not a FixIt tag.
+    # This also takes care of human error by checking for spaces between
+    # the "#" and the numbers
     if not re.match(r"#( )*[0-9]+", tag):
         return ""
 
@@ -31,13 +31,13 @@ def get_fixit_request_status(
     request_id: str, fixit_4me_account: str, api_key: str
 ) -> str:
     """
-    Gets the status of the FixIt request realative to the request id given.
+    Gets the status of the FixIt request relative to the request id given.
 
     params:
         request_id:
             str: The request id of the request to check.
         fixit_4me_account:
-            str: The fixit 4me account to find the request in.
+            str: The FixIt 4me account to find the request in.
         api_key:
             str: The api key used for authorizing with FixIt 4me account api.
 
