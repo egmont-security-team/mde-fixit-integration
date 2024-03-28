@@ -5,7 +5,7 @@ bp = func.Blueprint()
 
 
 @bp.timer_trigger(
-    schedule="0 0 8 * * Mon-Fri",
+    schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
     run_on_startup=False,
     use_monitor=False,
