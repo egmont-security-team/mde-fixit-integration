@@ -1,0 +1,4 @@
+[MESSAGES CONTROL]
+
+# Disable some of the pylint features
+disable = line-too-long, import-error
