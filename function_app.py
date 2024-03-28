@@ -1,4 +1,5 @@
 import azure.functions as func
+
 from src import ddc
 from src import cve
 

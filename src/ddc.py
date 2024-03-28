@@ -1,7 +1,24 @@
+"""
+This module contains the Azure function that takes care of the
+Data Defender cleanup tasks. This means it cleans up duplicate
+devices and removes FixIt tags that has the relative request completed.
+"""
+
+import re
+import os
 import logging
 
 import azure.functions as func
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 import requests
+
+from src.shared import (
+    get_fixit_request_id_from_tag,
+    get_fixit_request_status,
+    alter_device_tag,
+)
+
 
 bp = func.Blueprint()
 
@@ -22,32 +39,152 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         - Adds "ZZZ" tag to duplicate devices.
     """
 
-    logging.info("Started the Data Defender Cleanup task!")
+    logging.info("Started the Data Defender Cleanup tasks.")
 
-    AZURE_TENANT = "000-000-000-000"
-    AZURE_MDE_CLIENT_ID = "000-000-000-000"
-    AZURE_MDE_SECRET_VALUE = "000-000-000-000"
+    credential = DefaultAzureCredential()
+    key_vault_name = os.environ["KEY_VAULT_NAME"]
 
-    token: str = get_mde_token(
-        AZURE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE
+    if not key_vault_name:
+        logging.critical(
+            """
+            Did not find envrionment variable \"KEY_VAULT_NAME\". Please set this 
+            in \"local.settings.json\" or in the application settings in Azure.
+            """
+        )
+        return
+
+    secret_client = SecretClient(
+        vault_url=f"https://{key_vault_name}.vault.azure.net", credential=credential
     )
-    devices: list = get_devices(token)
+
+    # MDE Secrets
+    AZURE_MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
+    AZURE_MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
+    AZURE_MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
+    if not AZURE_MDE_TENANT or not AZURE_MDE_CLIENT_ID or not AZURE_MDE_SECRET_VALUE:
+        custom_dimensions = {
+            "AZURE_MDE_TENANT": "present" if AZURE_MDE_TENANT else "missing",
+            "AZURE_MDE_CLIENT_ID": "present" if AZURE_MDE_CLIENT_ID else "missing",
+            "AZURE_MDE_SECRET_VALUE": "present"
+            if AZURE_MDE_SECRET_VALUE
+            else "missing",
+        }
+        logging.critical(
+            "Missing some of Azure MDE secrets from key vault. Please add them or the function can't run.",
+            extra={"custom_dimensions": custom_dimensions},
+        )
+        return
+
+    # FixIt Secrets
+    FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
+    FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
+    if not FIXIT_4ME_ACCOUNT or not FIXIT_4ME_API_KEY:
+        custom_dimensions = {
+            "FIXIT_4ME_ACCOUNT": "present" if FIXIT_4ME_ACCOUNT else "missing",
+            "FIXIT_4ME_API_KEY": "present" if FIXIT_4ME_API_KEY else "missing",
+        }
+        logging.critical(
+            "Missing FixIt 4Me secrets from key vault. Please add them or the function can't run.",
+            extra={"custom_dimensions": custom_dimensions},
+        )
+        return
+
+    mde_token = get_mde_token(
+        AZURE_MDE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE
+    )
+    devices = get_devices(mde_token)
 
     if not devices:
         logging.info("Task won't continue as there is no devices to process.")
         return
 
+    devices_sorted_by_name = []
+
+    logging.info(
+        "Start removing FixIt tags that refrence a completed request from devices in the Micorsoft Defender portal."
+    )
+
+    removed_fixit_tags = 0
+
     for device in devices:
-        continue
+        device_id = device.get("id")
+        device_tags = device.get("machineTags")
+        device_name = device.get("computerDnsName")
+        device_health = device.get("healthStatus")
+        device_object = {
+            "id": device_id,
+            "name": device_name,
+            "tags": device_tags,
+            "health": device_health,
+        }
+
+        # This is later used to determine if the devices are duplicates.
+        if devices_sorted_by_name.get(device_name) is None:
+            devices_sorted_by_name[device_name] = [device_object]
+        else:
+            devices_sorted_by_name[device_name].append(device_object)
+
+        for tag in device_tags:
+            request_id = get_fixit_request_id_from_tag(tag)
+
+            if not request_id:
+                continue
+
+            request_status = get_fixit_request_status(
+                tag, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
+            )
+
+            if request_status == "completed":
+                if alter_device_tag(mde_token, device_id, tag, "Remove"):
+                    removed_fixit_tags += 1
+
+    logging.info(
+        f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal."
+    )
+
+    # Remove devices that only appear once (by name) in the table.
+    for device_name, devices in list(devices_sorted_by_name.items()):
+        if len(devices) == 1:
+            del devices_sorted_by_name[device_name]
+
+    logging.info(
+        'Start adding "ZZZ" to duplicate devices in the Micorsoft Defender portal.'
+    )
+
+    duplicate_devices_tagged = 0
+
+    for device_name, devices in devices_sorted_by_name.items():
+        for index, device in enumerate(devices):
+            device_id = device.get("id")
+            device_tags = device.get("tags")
+            device_health = device.get("health")
+
+            # If it already have the ZZZ or it isn't inactive, tag skip it
+            if not len(filter(is_zzz_tag, device_tags)) or device_health != "Inactive":
+                continue
+
+            if alter_device_tag(mde_token, device_id, "ZZZ", "Add"):
+                duplicate_devices_tagged += 1
+
+    logging.info(
+        f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defende portal."
+    )
 
 
-def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str | None:
+def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
     """
     Autheticates with Azure to get a new API key for the Defender Portal.
 
+    params:
+        tenant:
+            str: The tenant of the MDE envrionment.
+        client_id:
+            str: TODO: describe
+        secret_value:
+            str: TODO: describe
+
     returns:
         str: The bearer token that grants authorization for the Defender Portal API.
-        None: Returns `None` when it fails to get the desired authorization token.
     """
 
     res = requests.post(
@@ -64,17 +201,17 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str | None:
     json = res.json()
 
     if status_code != 200:
-        custom_dimensions = {"status": status_code, "json": json}
+        custom_dimensions = {"status": status_code, "body": res.content}
         logging.error(
             "Couldn't get Microsoft Defender token from Microsoft authetication flow",
             extra={"custom_dimensions": custom_dimensions},
         )
-        return
+        return ""
 
     token = json.get("access_token")
 
     if not token:
-        custom_dimensions = {"status": status_code, "json": json}
+        custom_dimensions = {"status": status_code, "body": res.content}
         logging.error(
             "The Microsoft Defender token was not provided in the request even tho is was succelsful",
             extra={"custom_dimensions": custom_dimensions},
@@ -89,11 +226,15 @@ def get_devices(token: str) -> list:
     This might takes multiples requests because the Microsoft Defender API
     only allows to fetch 10K devices at a time.
 
+    params:
+        token:
+            str: The bearer token for authorizing with the Microsoft Defender API.
+
     returns:
         list: The machines from the Defender Portal API.
     """
 
-    devices_url = "https://api.securitycenter.microsoft.com/api/machines?$filter=computerDnsName%20ne%20null"
+    devices_url = "https://api.securitycenter.microsoft.com/api/machines?$filter=(computerDnsName ne null) and (isExcluded eq false)"
     devices = []
 
     while devices_url:
@@ -103,10 +244,7 @@ def get_devices(token: str) -> list:
         json = res.json()
 
         if status_code != 200:
-            custom_dimensions = {
-                "status": status_code,
-                "content": res.content,
-            }
+            custom_dimensions = {"status": status_code, "content": res.content}
             logging.error(
                 "Failed to fetch devices from Microsoft Defender API.",
                 extra={"custom_dimensions": custom_dimensions},
@@ -131,3 +269,7 @@ def get_devices(token: str) -> list:
     )
 
     return devices
+
+
+def is_zzz_tag(tag: str) -> bool:
+    return re.match(r"(?i)^z{3}$", tag)
