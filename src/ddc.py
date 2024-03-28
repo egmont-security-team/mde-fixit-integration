@@ -11,4 +11,7 @@ bp = func.Blueprint()
     use_monitor=False,
 )
 def ddc_automation(myTimer: func.TimerRequest) -> None:
+    test_logging("test")
+
+def test_logging():
     logging.info("test")
