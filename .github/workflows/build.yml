@@ -27,7 +27,7 @@ jobs:
           source .venv/bin/activate
 
       - name: Install dependencies
-        run: pip install -e . 
+        run: pip install --target="./.python_packages/lib/site-packages" -r requirements.txt 
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* ./.venv -r
