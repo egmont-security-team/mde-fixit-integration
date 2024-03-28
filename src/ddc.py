@@ -1,4 +1,5 @@
 import logging
+import requests
 import azure.functions as func
 
 bp = func.Blueprint()
