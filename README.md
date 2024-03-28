@@ -33,3 +33,7 @@ Runs: unkown.
 #### High Exposure Requests
 
 Runs: unkown.
+
+## Configuration
+
+- You can set the environment variable `KEY_VAULT_NAME` to change what keyvault will be used to load secrets.
