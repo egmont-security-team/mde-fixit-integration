@@ -13,11 +13,11 @@ def init_logger():
             'Couldn\'t setup Application Insights logging since "APPLICATIONINSIGHTS_CONNECTION_STRING" is not present.'
         )
 
-    #if not logger.handlers:
-    #    azure_handler = AzureLogHandler(
-    #        connection_string=connection_string
-    #    )
-    #    logger.addHandler(azure_handler)
+    if not logger.handlers:
+        azure_handler = AzureLogHandler(
+            connection_string=connection_string
+        )
+        logger.addHandler(azure_handler)
 
     return logger
 
