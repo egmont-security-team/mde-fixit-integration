@@ -6,7 +6,7 @@ hit by certain CVE's.
 
 import azure.functions as func
 
-from src.loggin import logger
+from src.logging import logger
 
 bp = func.Blueprint()
 
