@@ -39,7 +39,7 @@ def get_fixit_request_status(
         fixit_4me_account:
             str: The FixIt 4me account to find the request in.
         api_key:
-            str: The api key used for authorizing with FixIt 4me account api.
+            str: The api key used for authorizing with FixIt 4me REST api.
 
     returns:
         The status of the request.
@@ -65,12 +65,12 @@ def get_fixit_request_status(
 
         if status_code == 404:
             logging.error(
-                f'The request "#{request_id}" was not found in the FixIt 4me account.',
+                f'The request "{request_id}" was not found in the FixIt 4me account.',
                 extra={"custom_dimensions": custom_dimensions},
             )
         else:
             logging.error(
-                f'Could not get the request #"{request_id}" from the FixIt 4me account API.',
+                f'Could not get the request "{request_id}" from the FixIt 4me REST API.',
                 extra={"custom_dimensions": custom_dimensions},
             )
 

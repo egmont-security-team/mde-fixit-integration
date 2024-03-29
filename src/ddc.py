@@ -26,7 +26,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=False,
 )
 def ddc_automation(myTimer: func.TimerRequest) -> None:
@@ -57,31 +57,29 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         vault_url=f"https://{key_vault_name}.vault.azure.net", credential=credential
     )
 
-    # MDE Secrets
+    # MDE secrets
     AZURE_MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
     AZURE_MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
     AZURE_MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
     if not AZURE_MDE_TENANT or not AZURE_MDE_CLIENT_ID or not AZURE_MDE_SECRET_VALUE:
         custom_dimensions = {
-            "AZURE_MDE_TENANT": "present" if AZURE_MDE_TENANT else "missing",
-            "AZURE_MDE_CLIENT_ID": "present" if AZURE_MDE_CLIENT_ID else "missing",
-            "AZURE_MDE_SECRET_VALUE": "present"
-            if AZURE_MDE_SECRET_VALUE
-            else "missing",
+            "AZURE_MDE_TENANT": "set" if AZURE_MDE_TENANT else "missing",
+            "AZURE_MDE_CLIENT_ID": "set" if AZURE_MDE_CLIENT_ID else "missing",
+            "AZURE_MDE_SECRET_VALUE": "set" if AZURE_MDE_SECRET_VALUE else "missing",
         }
         logging.critical(
-            "Missing some of Azure MDE secrets from key vault. Please add them or the function can't run.",
+            "Missing some of Azure MDE secrets from the key vault. Please add them or the function can't run.",
             extra={"custom_dimensions": custom_dimensions},
         )
         return
 
-    # FixIt Secrets
+    # FixIt secrets
     FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
     FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
     if not FIXIT_4ME_ACCOUNT or not FIXIT_4ME_API_KEY:
         custom_dimensions = {
-            "FIXIT_4ME_ACCOUNT": "present" if FIXIT_4ME_ACCOUNT else "missing",
-            "FIXIT_4ME_API_KEY": "present" if FIXIT_4ME_API_KEY else "missing",
+            "FIXIT_4ME_ACCOUNT": "set" if FIXIT_4ME_ACCOUNT else "missing",
+            "FIXIT_4ME_API_KEY": "set" if FIXIT_4ME_API_KEY else "missing",
         }
         logging.critical(
             "Missing FixIt 4Me secrets from key vault. Please add them or the function can't run.",
@@ -98,7 +96,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         logging.info("Task won't continue as there is no devices to process.")
         return
 
-    devices_sorted_by_name = []
+    devices_sorted_by_name = {}
 
     logging.info(
         "Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal."
@@ -131,7 +129,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
                 continue
 
             request_status = get_fixit_request_status(
-                tag, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
+                request_id, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
             )
 
             if request_status == "completed":
@@ -148,7 +146,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             del devices_sorted_by_name[device_name]
 
     logging.info(
-        'Start adding "ZZZ" to duplicate devices in the Microsoft Defender portal.'
+        'Start adding "ZZZ" tag to duplicate devices in the Microsoft Defender portal.'
     )
 
     duplicate_devices_tagged = 0
