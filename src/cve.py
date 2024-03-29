@@ -4,8 +4,9 @@ the CVE related stuff. This means creating FixIt tickets for devices
 hit by certain CVE's.
 """
 
-import logging
 import azure.functions as func
+
+from src.loggin import logger
 
 bp = func.Blueprint()
 
@@ -20,4 +21,4 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     """
     TODO: This function is WIP.
     """
-    logging.info("CVE cleanup task has started")
+    logger.info("CVE cleanup task has started")

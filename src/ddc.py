@@ -6,13 +6,13 @@ devices and removes FixIt tags that has the relative request completed.
 
 import re
 import os
-import logging
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 import requests
 
+from src.logging import logger
 from src.shared import (
     get_fixit_request_id_from_tag,
     get_fixit_request_status,
@@ -39,13 +39,13 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         - Adds "ZZZ" tag to duplicate devices.
     """
 
-    logging.info("Started the Data Defender Cleanup tasks.")
+    logger.info("Started the Data Defender Cleanup tasks.")
 
     credential = DefaultAzureCredential()
     key_vault_name = os.environ["KEY_VAULT_NAME"]
 
     if not key_vault_name:
-        logging.critical(
+        logger.critical(
             """
             Did not find environment variable \"KEY_VAULT_NAME\". Please set this 
             in \"local.settings.json\" or in the application settings in Azure.
@@ -67,7 +67,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             "AZURE_MDE_CLIENT_ID": "set" if AZURE_MDE_CLIENT_ID else "missing",
             "AZURE_MDE_SECRET_VALUE": "set" if AZURE_MDE_SECRET_VALUE else "missing",
         }
-        logging.critical(
+        logger.critical(
             "Missing some of Azure MDE secrets from the key vault. Please add them or the function can't run.",
             extra={"custom_dimensions": custom_dimensions},
         )
@@ -81,7 +81,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             "FIXIT_4ME_ACCOUNT": "set" if FIXIT_4ME_ACCOUNT else "missing",
             "FIXIT_4ME_API_KEY": "set" if FIXIT_4ME_API_KEY else "missing",
         }
-        logging.critical(
+        logger.critical(
             "Missing FixIt 4Me secrets from key vault. Please add them or the function can't run.",
             extra={"custom_dimensions": custom_dimensions},
         )
@@ -93,12 +93,12 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     devices = get_devices(mde_token)
 
     if not devices:
-        logging.info("Task won't continue as there is no devices to process.")
+        logger.info("Task won't continue as there is no devices to process.")
         return
 
     devices_sorted_by_name = {}
 
-    logging.info(
+    logger.info(
         "Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal."
     )
 
@@ -136,7 +136,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
                 if alter_device_tag(mde_token, device_id, tag, "Remove"):
                     removed_fixit_tags += 1
 
-    logging.info(
+    logger.info(
         f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal."
     )
 
@@ -145,7 +145,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         if len(devices) == 1:
             del devices_sorted_by_name[device_name]
 
-    logging.info(
+    logger.info(
         'Start adding "ZZZ" tag to duplicate devices in the Microsoft Defender portal.'
     )
 
@@ -164,7 +164,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             if alter_device_tag(mde_token, device_id, "ZZZ", "Add"):
                 duplicate_devices_tagged += 1
 
-    logging.info(
+    logger.info(
         f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defender portal."
     )
 
@@ -200,7 +200,7 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
 
     if status_code != 200:
         custom_dimensions = {"status": status_code, "body": res.content}
-        logging.error(
+        logger.error(
             "Couldn't get Microsoft Defender token from Microsoft authentication flow.",
             extra={"custom_dimensions": custom_dimensions},
         )
@@ -210,7 +210,7 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
 
     if not token:
         custom_dimensions = {"status": status_code, "body": res.content}
-        logging.error(
+        logger.error(
             "The Microsoft Defender token was not provided in the request even tho is was successful.",
             extra={"custom_dimensions": custom_dimensions},
         )
@@ -243,7 +243,7 @@ def get_devices(token: str) -> list:
 
         if status_code != 200:
             custom_dimensions = {"status": status_code, "content": res.content}
-            logging.error(
+            logger.error(
                 "Failed to fetch devices from Microsoft Defender API.",
                 extra={"custom_dimensions": custom_dimensions},
             )
@@ -251,7 +251,7 @@ def get_devices(token: str) -> list:
 
         # Get the new devices from the request.
         new_devices = json.get("value")
-        logging.info(
+        logger.info(
             f"Fetched {len(new_devices)} new devices from Microsoft Defender API."
         )
 
@@ -262,7 +262,7 @@ def get_devices(token: str) -> list:
         # This URL given here can be used to fetch the next devices.
         devices_url = json.get("@odata.nextLink")
 
-    logging.info(
+    logger.info(
         f"Fetched a total of {len(devices)} devices from Microsoft Defender API."
     )
 

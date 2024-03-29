@@ -1,7 +1,8 @@
 import re
-import logging
 
 import requests
+
+from src.logging import logger
 
 
 def get_fixit_request_id_from_tag(tag: str) -> str:
@@ -64,12 +65,17 @@ def get_fixit_request_status(
         }
 
         if status_code == 404:
-            logging.error(
+            logger.error(
                 f'The request "{request_id}" was not found in the FixIt 4me account.',
                 extra={"custom_dimensions": custom_dimensions},
             )
         else:
-            logging.error(
+            properties = {"custom_dimensions": {"test": "test"}}
+            logger.error(
+                "test_2_2",
+                extra=properties,
+            )
+            logger.error(
                 f'Could not get the request "{request_id}" from the FixIt 4me REST API.',
                 extra={"custom_dimensions": custom_dimensions},
             )
@@ -113,13 +119,13 @@ def alter_device_tag(token: str, device_id: str, tag: str, action: str) -> bool:
             "status": status_code,
             "body": res.content,
         }
-        logging.error(
+        logger.error(
             f'Could\'t perform action "{action}" with tag "{tag}" on device with ID "{device_id}".',
             extra={"custom_dimensions": custom_dimensions},
         )
         return False
 
-    logging.info(
+    logger.info(
         f'Performed action "{action}" with tag "{tag}" on device with ID "{device_id}".'
     )
 
