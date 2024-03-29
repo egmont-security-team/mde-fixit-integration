@@ -19,6 +19,9 @@ def init_logger():
         )
         logger.addHandler(azure_handler)
 
+    test = os.environ["AZURE_CLIENT_ID"]
+    logger.info(f"Test env: {test}")
+
     return logger
 
 
