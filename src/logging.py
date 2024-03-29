@@ -5,7 +5,7 @@ from opencensus.ext.azure.log_exporter import AzureLogHandler
 
 
 def init_logger():
-    logger = logging.getLogger("AzureLogger")
+    logger = logging.getLogger(__name__)
     connection_string = os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"]
 
     if not connection_string:
