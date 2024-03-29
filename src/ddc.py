@@ -58,9 +58,9 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     )
 
     # MDE secrets
-    AZURE_MDE_TENANT = "test"#secret_client.get_secret("Azure-MDE-Tenant").value
-    AZURE_MDE_CLIENT_ID = "test"#secret_client.get_secret("Azure-MDE-Client-ID").value
-    AZURE_MDE_SECRET_VALUE = "test"#secret_client.get_secret("Azure-MDE-Secret-Value").value
+    AZURE_MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
+    AZURE_MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
+    AZURE_MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
     if not AZURE_MDE_TENANT or not AZURE_MDE_CLIENT_ID or not AZURE_MDE_SECRET_VALUE:
         custom_dimensions = {
             "AZURE_MDE_TENANT": "set" if AZURE_MDE_TENANT else "missing",
@@ -74,8 +74,8 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         return
 
     # FixIt secrets
-    FIXIT_4ME_ACCOUNT = "test"#secret_client.get_secret("FixIt-4Me-Account").value
-    FIXIT_4ME_API_KEY = "test"#secret_client.get_secret("FixIt-4Me-API-Key").value
+    FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
+    FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
     if not FIXIT_4ME_ACCOUNT or not FIXIT_4ME_API_KEY:
         custom_dimensions = {
             "FIXIT_4ME_ACCOUNT": "set" if FIXIT_4ME_ACCOUNT else "missing",
@@ -199,7 +199,7 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
     json = res.json()
 
     if status_code != 200:
-        custom_dimensions = {"status": status_code, "body": res.content}
+        custom_dimensions = {"status": status_code, "body": json}
         logger.error(
             "Couldn't get Microsoft Defender token from Microsoft authentication flow.",
             extra={"custom_dimensions": custom_dimensions},
@@ -209,9 +209,9 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
     token = json.get("access_token")
 
     if not token:
-        custom_dimensions = {"status": status_code, "body": res.content}
+        custom_dimensions = {"status": status_code, "body": json}
         logger.error(
-            "The Microsoft Defender token was not provided in the request even tho is was successful.",
+            "The Microsoft Defender token was not provided in the request even tho it is was successful.",
             extra={"custom_dimensions": custom_dimensions},
         )
 
@@ -238,11 +238,11 @@ def get_devices(token: str) -> list:
     while devices_url:
         res = requests.get(devices_url, headers={"Authorization": f"Bearer {token}"})
 
-        status_code: int = res.status_code
+        status_code = res.status_code
         json = res.json()
 
         if status_code != 200:
-            custom_dimensions = {"status": status_code, "content": res.content}
+            custom_dimensions = {"status": status_code, "body": json}
             logger.error(
                 "Failed to fetch devices from Microsoft Defender API.",
                 extra={"custom_dimensions": custom_dimensions},

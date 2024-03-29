@@ -14,9 +14,7 @@ def init_logger():
         )
 
     if not logger.handlers:
-        azure_handler = AzureLogHandler(
-            connection_string=connection_string
-        )
+        azure_handler = AzureLogHandler(connection_string=connection_string)
         logger.addHandler(azure_handler)
 
     return logger
