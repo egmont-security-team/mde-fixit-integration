@@ -41,6 +41,9 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
 
     logger.info("Started the Data Defender Cleanup tasks.")
 
+    test = os.environ["AZURE_CLIENT_ID"]
+    logger.info(f"Test env: {test}")
+
     credential = DefaultAzureCredential()
     key_vault_name = os.environ["KEY_VAULT_NAME"]
 
