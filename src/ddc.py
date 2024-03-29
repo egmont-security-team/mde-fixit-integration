@@ -199,7 +199,7 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
     json = res.json()
 
     if status_code != 200:
-        custom_dimensions = {"status": status_code, "body": json}
+        custom_dimensions = {"status": status_code, "body": res.content}
         logger.error(
             "Couldn't get Microsoft Defender token from Microsoft authentication flow.",
             extra={"custom_dimensions": custom_dimensions},
@@ -209,7 +209,7 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
     token = json.get("access_token")
 
     if not token:
-        custom_dimensions = {"status": status_code, "body": json}
+        custom_dimensions = {"status": status_code, "body": res.content}
         logger.error(
             "The Microsoft Defender token was not provided in the request even tho it is was successful.",
             extra={"custom_dimensions": custom_dimensions},
@@ -242,7 +242,7 @@ def get_devices(token: str) -> list:
         json = res.json()
 
         if status_code != 200:
-            custom_dimensions = {"status": status_code, "body": json}
+            custom_dimensions = {"status": status_code, "body": res.content}
             logger.error(
                 "Failed to fetch devices from Microsoft Defender API.",
                 extra={"custom_dimensions": custom_dimensions},

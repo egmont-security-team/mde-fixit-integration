@@ -61,7 +61,7 @@ def get_fixit_request_status(
         custom_dimensions = {
             "X-4me-Account": fixit_4me_account,
             "status": status_code,
-            "body": json,
+            "body": res.content,
         }
 
         if status_code == 404:
@@ -108,12 +108,11 @@ def alter_device_tag(token: str, device_id: str, tag: str, action: str) -> bool:
     )
 
     status_code = res.status_code
-    json = res.json()
 
     if status_code != 200:
         custom_dimensions = {
             "status": status_code,
-            "body": json,
+            "body": res.content,
         }
         logger.error(
             f'Could\'t perform action "{action}" with tag "{tag}" on device with ID "{device_id}".',
