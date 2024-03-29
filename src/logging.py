@@ -1,11 +1,12 @@
-import logging
 import os
+import logging
+
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 
 
 def init_logger():
     logger = logging.getLogger(__name__)
-    instrumentation_key = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+    instrumentation_key = os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"]
 
     if not instrumentation_key:
         logger.error(
@@ -14,7 +15,7 @@ def init_logger():
 
     if not logger.handlers:
         azure_handler = AzureLogHandler(
-            connection_string=f"InstrumentationKey={instrumentation_key}"
+            connection_string=instrumentation_key
         )
         logger.addHandler(azure_handler)
 
