@@ -58,9 +58,9 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     )
 
     # MDE secrets
-    AZURE_MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
-    AZURE_MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
-    AZURE_MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
+    AZURE_MDE_TENANT = "test"#secret_client.get_secret("Azure-MDE-Tenant").value
+    AZURE_MDE_CLIENT_ID = "test"#secret_client.get_secret("Azure-MDE-Client-ID").value
+    AZURE_MDE_SECRET_VALUE = "test"#secret_client.get_secret("Azure-MDE-Secret-Value").value
     if not AZURE_MDE_TENANT or not AZURE_MDE_CLIENT_ID or not AZURE_MDE_SECRET_VALUE:
         custom_dimensions = {
             "AZURE_MDE_TENANT": "set" if AZURE_MDE_TENANT else "missing",
@@ -74,8 +74,8 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         return
 
     # FixIt secrets
-    FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
-    FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
+    FIXIT_4ME_ACCOUNT = "test"#secret_client.get_secret("FixIt-4Me-Account").value
+    FIXIT_4ME_API_KEY = "test"#secret_client.get_secret("FixIt-4Me-API-Key").value
     if not FIXIT_4ME_ACCOUNT or not FIXIT_4ME_API_KEY:
         custom_dimensions = {
             "FIXIT_4ME_ACCOUNT": "set" if FIXIT_4ME_ACCOUNT else "missing",
