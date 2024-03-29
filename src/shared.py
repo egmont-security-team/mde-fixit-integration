@@ -70,11 +70,6 @@ def get_fixit_request_status(
                 extra={"custom_dimensions": custom_dimensions},
             )
         else:
-            properties = {"custom_dimensions": {"test": "test"}}
-            logger.error(
-                "test_2_2",
-                extra=properties,
-            )
             logger.error(
                 f'Could not get the request "{request_id}" from the FixIt 4me REST API.',
                 extra={"custom_dimensions": custom_dimensions},
