@@ -26,7 +26,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=False,
 )
 def ddc_automation(myTimer: func.TimerRequest) -> None:
@@ -270,4 +270,14 @@ def get_devices(token: str) -> list:
 
 
 def is_zzz_tag(tag: str) -> bool:
+    """
+    This returns wether this is a "ZZZ" tag or not.
+
+    returns:
+        bool: True if the tag is a "ZZZ" tag.
+    
+    params:
+        tag:
+            str: The string that represents the tag.
+    """
     return re.match(r"(?i)^z{3}$", tag)
