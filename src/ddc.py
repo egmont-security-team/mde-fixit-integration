@@ -175,11 +175,11 @@ def get_mde_token(tenant: str, client_id: str, secret_value: str) -> str:
 
     params:
         tenant:
-            str: The tenant of the MDE environment.
+            str: The tenant of the Microsoft Defender environment.
         client_id:
-            str: TODO: describe
+            str: The ID of the Microsoft Defender app in Azure.
         secret_value:
-            str: TODO: describe
+            str: The secret value of the Microsoft Defender app in Azure.
 
     returns:
         str: The bearer token that grants authorization for the Defender Portal API.
