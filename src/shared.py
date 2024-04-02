@@ -28,7 +28,7 @@ def get_fixit_request_id_from_tag(tag: str) -> str:
     if not re.match(r"#( )*[0-9]+", tag):
         return ""
 
-    # This removes the "#"" and the spaces from the tag.
+    # This removes the "#" and the spaces from the tag.
     return re.sub(r"#( )*", "", tag)
 
 
