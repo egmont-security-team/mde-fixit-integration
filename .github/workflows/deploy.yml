@@ -45,7 +45,7 @@ jobs:
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
-          app-name: 'mde-fixit-integration'
+          app-name: 'fa-mde-fixit-integration'
           slot-name: ${{ inputs.DEPLOY_ENV }}
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           scm-do-build-during-deployment: true
