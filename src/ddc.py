@@ -160,7 +160,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             device_health = device.get("health")
 
             # If it already have the ZZZ or it isn't inactive, skip it
-            if not len(list(filter(is_zzz_tag, device_tags))) or device_health != "Inactive":
+            if len(list(filter(is_zzz_tag, device_tags))) or device_health != "Inactive":
                 continue
 
             if alter_device_tag(mde_token, device_id, "ZZZ", "Add", device_name=device_name):
