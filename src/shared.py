@@ -3,6 +3,7 @@ Shared functions used by multiple files.
 """
 
 import re
+import time
 
 import requests
 
@@ -85,7 +86,7 @@ def get_fixit_request_status(
     return json.get("status")
 
 
-def alter_device_tag(token: str, device_id: str, tag: str, action: str, device_name="") -> bool:
+def alter_device_tag(token: str, device_id: str, tag: str, action: str, device_name="", retry=True) -> bool:
     """
     Alters a tag from a given device in the defender portal.
 
@@ -98,6 +99,10 @@ def alter_device_tag(token: str, device_id: str, tag: str, action: str, device_n
             str: The to remove from the machine.
         action:
             str: The actions to perform. Either "Remove" or "Add".
+        device_name:
+            str: The name of the current device.
+        retry:
+            bool: True if it should try to fetch request again after 10 seconds if first request fails
 
     returns:
         bool: True if it successfully removes the tag otherwise False.
@@ -119,6 +124,15 @@ def alter_device_tag(token: str, device_id: str, tag: str, action: str, device_n
             "status": status_code,
             "body": res.content,
         }
+
+        if status_code == 429 and retry:
+            time.sleep(10)
+            logger.info(
+                f'Could\'t perform action "{action}" with tag "{tag}" on device with ID "{device_id}". Retrying after 10 seconds.',
+                extra={"custom_dimensions": custom_dimensions},
+            )
+            alter_device_tag(token, device_id, tag, action, device_name=device_name, retry=False)
+
         logger.error(
             f'Could\'t perform action "{action}" with tag "{tag}" on device with ID "{device_id}".',
             extra={"custom_dimensions": custom_dimensions},
