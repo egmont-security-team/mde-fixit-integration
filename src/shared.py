@@ -33,7 +33,7 @@ def get_fixit_request_id_from_tag(tag: str) -> str:
 
 
 def get_fixit_request_status(
-    request_id: str, fixit_4me_account: str, api_key: str
+    request_id: str, base_url: str, fixit_4me_account: str, api_key: str
 ) -> str:
     """
     Gets the status of the FixIt request relative to the request id given.
@@ -51,7 +51,7 @@ def get_fixit_request_status(
     """
 
     res = requests.get(
-        f"https://api.4me.com/v1/requests/{request_id}",
+        f"{base_url}/requests/{request_id}",
         headers={
             "X-4me-Account": fixit_4me_account,
             "Authorization": f"Bearer {api_key}",
@@ -63,6 +63,7 @@ def get_fixit_request_status(
 
     if status_code != 200:
         custom_dimensions = {
+            "base_url": base_url,
             "X-4me-Account": fixit_4me_account,
             "status": status_code,
             "body": res.content,
@@ -84,7 +85,7 @@ def get_fixit_request_status(
     return json.get("status")
 
 
-def alter_device_tag(token: str, device_id: str, tag: str, action: str) -> bool:
+def alter_device_tag(token: str, device_id: str, tag: str, action: str, device_name="") -> bool:
     """
     Alters a tag from a given device in the defender portal.
 
@@ -124,8 +125,13 @@ def alter_device_tag(token: str, device_id: str, tag: str, action: str) -> bool:
         )
         return False
 
+    if device_name:
+        device_name_formatted = f" ({device_name})"
+    else:
+        device_name_formatted = ""
+
     logger.info(
-        f'Performed action "{action}" with tag "{tag}" on device with ID "{device_id}".'
+        f'Performed action "{action}" with tag "{tag}" on device with ID "{device_id}"{device_name_formatted}.'
     )
 
     return True

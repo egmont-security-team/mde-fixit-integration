@@ -74,10 +74,12 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         return
 
     # FixIt secrets
+    FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
     FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
     FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
     if not FIXIT_4ME_ACCOUNT or not FIXIT_4ME_API_KEY:
         custom_dimensions = {
+            "FIXIT_4ME_BASE_URL": "set" if FIXIT_4ME_ACCOUNT else "missing",
             "FIXIT_4ME_ACCOUNT": "set" if FIXIT_4ME_ACCOUNT else "missing",
             "FIXIT_4ME_API_KEY": "set" if FIXIT_4ME_API_KEY else "missing",
         }
@@ -129,11 +131,11 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
                 continue
 
             request_status = get_fixit_request_status(
-                request_id, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
+                request_id, FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
             )
 
             if request_status == "completed":
-                if alter_device_tag(mde_token, device_id, tag, "Remove"):
+                if alter_device_tag(mde_token, device_id, tag, "Remove", device_name=device_name):
                     removed_fixit_tags += 1
 
     logger.info(
@@ -157,11 +159,11 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             device_tags = device.get("tags")
             device_health = device.get("health")
 
-            # If it already have the ZZZ or it isn't inactive, tag skip it
-            if not len(filter(is_zzz_tag, device_tags)) or device_health != "Inactive":
+            # If it already have the ZZZ or it isn't inactive, skip it
+            if not len(list(filter(is_zzz_tag, device_tags))) or device_health != "Inactive":
                 continue
 
-            if alter_device_tag(mde_token, device_id, "ZZZ", "Add"):
+            if alter_device_tag(mde_token, device_id, "ZZZ", "Add", device_name=device_name):
                 duplicate_devices_tagged += 1
 
     logger.info(
