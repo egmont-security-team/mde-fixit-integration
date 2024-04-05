@@ -106,8 +106,8 @@ def alter_device_tag(token: str, device_id: str, tag: str, action: str, device_n
     res = requests.post(
         f"https://api.securitycenter.microsoft.com/api/machines/{device_id}/tags",
         json={
-            "Value": f"{tag}",
-            "Action": "Remove",
+            "Value": tag,
+            "Action": action,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
