@@ -18,12 +18,17 @@ def init_logger() -> logging.Logger:
         Logger: The logger instance.
     """
     logger = logging.getLogger(__name__)
-    connection_string = os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"]
+
+    try:
+        connection_string = os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"]
+    except KeyError:
+        connection_string = ""
 
     if not connection_string:
-        logger.error(
+        logger.warning(
             'Couldn\'t setup Application Insights logging since "APPLICATIONINSIGHTS_CONNECTION_STRING" is not present.'
         )
+        return logger
 
     if not logger.handlers:
         azure_handler = AzureLogHandler(connection_string=connection_string)

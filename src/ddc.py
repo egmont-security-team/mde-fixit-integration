@@ -26,7 +26,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=False,
 )
 def ddc_automation(myTimer: func.TimerRequest) -> None:
@@ -42,9 +42,12 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     logger.info("Started the Data Defender Cleanup tasks.")
 
     credential = DefaultAzureCredential()
-    key_vault_name = os.environ["KEY_VAULT_NAME"]
 
-    if not key_vault_name:
+    try:
+        key_vault_name = os.environ["KEY_VAULT_NAME"]
+        if not key_vault_name:
+            raise KeyError
+    except KeyError:
         logger.critical(
             """
             Did not find environment variable \"KEY_VAULT_NAME\". Please set this 
@@ -61,33 +64,11 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     AZURE_MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
     AZURE_MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
     AZURE_MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
-    if not AZURE_MDE_TENANT or not AZURE_MDE_CLIENT_ID or not AZURE_MDE_SECRET_VALUE:
-        custom_dimensions = {
-            "AZURE_MDE_TENANT": "set" if AZURE_MDE_TENANT else "missing",
-            "AZURE_MDE_CLIENT_ID": "set" if AZURE_MDE_CLIENT_ID else "missing",
-            "AZURE_MDE_SECRET_VALUE": "set" if AZURE_MDE_SECRET_VALUE else "missing",
-        }
-        logger.critical(
-            "Missing some of Azure MDE secrets from the key vault. Please add them or the function can't run.",
-            extra={"custom_dimensions": custom_dimensions},
-        )
-        return
 
     # FixIt secrets
     FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
     FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
     FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
-    if not FIXIT_4ME_ACCOUNT or not FIXIT_4ME_API_KEY:
-        custom_dimensions = {
-            "FIXIT_4ME_BASE_URL": "set" if FIXIT_4ME_ACCOUNT else "missing",
-            "FIXIT_4ME_ACCOUNT": "set" if FIXIT_4ME_ACCOUNT else "missing",
-            "FIXIT_4ME_API_KEY": "set" if FIXIT_4ME_API_KEY else "missing",
-        }
-        logger.critical(
-            "Missing FixIt 4Me secrets from key vault. Please add them or the function can't run.",
-            extra={"custom_dimensions": custom_dimensions},
-        )
-        return
 
     mde_token = get_mde_token(
         AZURE_MDE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE
