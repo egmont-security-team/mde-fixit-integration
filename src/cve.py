@@ -76,4 +76,3 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     for device in devices:
         continue
-

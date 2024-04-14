@@ -10,39 +10,35 @@ from lib.logging import logger
 
 class MDEClient:
     """
-    A Microsoft Defender for Endpoint client that can interact with the Microsoft Defender API.
+    A Microsoft Defender for Endpoint client that can interact with the MDE API.
     """
 
     azure_mde_tenant: str
     azure_mde_client_id: str
     azure_mde_secret_value: str
 
-    api_token: str
+    api_token: None | str
 
     def __init__(
         self,
         azure_mde_tenant: str,
         azure_mde_client_id: str,
         azure_mde_secret_value: str,
+        authenticate=True,
     ):
+        """
+        Create a new Micosoft Defender for Endpoint client to interact with the MDE API.
+        """
         self.azure_mde_tenant = azure_mde_tenant
         self.azure_mde_client_id = azure_mde_client_id
         self.azure_mde_secret_value = azure_mde_secret_value
 
+        if authenticate:
+            self.authenticate()
+
     def authenticate(self) -> None:
         """
-        Authenticates with Azure to get a new API key for the Microsoft Defender Portal.
-
-        params:
-            tenant:
-                str: The tenant of the Microsoft Defender environment.
-            client_id:
-                str: The ID of the Microsoft Defender app in Azure.
-            secret_value:
-                str: The secret value of the Microsoft Defender app in Azure.
-
-        returns:
-            str: The bearer token that grants authorization for the Defender Portal API.
+        Authenticates with Azure and gets a new API key for Microsoft Defender for Endpoint.
         """
 
         res = requests.post(
@@ -77,19 +73,15 @@ class MDEClient:
 
         return token
 
-    def get_devices(self) -> list("MDEDevice"):
+    def get_devices(self) -> list["MDEDevice"]:
         """
         Gets a list of all devices from Microsoft Defender for Endpoint.
 
-        This might takes multiples requests because Microsoft Defender for Endpoint
+        This might takes multiples requests, because Microsoft Defender for Endpoint
         only allows to fetch 10K devices at a time.
 
-        params:
-            token:
-                str: The bearer token for authorizing with the Microsoft Defender for Endpoint.
-
         returns:
-            list('MDEDevice'): The machines from Microsoft Defender for Endpoint.
+            list['MDEDevice']: The machines from Microsoft Defender for Endpoint.
         """
 
         devices_url = "https://api.securitycenter.microsoft.com/api/machines?$filter=(computerDnsName ne null) and (isExcluded eq false)"
@@ -140,21 +132,17 @@ class MDEClient:
         self, device: "MDEDevice", tag: str, action: str, retry=True
     ) -> bool:
         """
-        Alters a tag fro a given device using Mirosoft Defender for Endpoint.
+        Alters a tag for a given device using Mirosoft Defender for Endpoint.
 
         params:
-            token:
-                str: The bearer token to authorize with the Microsoft Defender API.
-            device_id:
-                str: The id of the device to remove the tag from.
+            device:
+                "MDEDevice": The device to alter the tag from.
             tag:
-                str: The to remove from the machine.
+                str: The tag to alter.
             action:
                 str: The actions to perform. Either "Remove" or "Add".
-            device_name:
-                str: The name of the current device.
-            retry:
-                bool: True if it should try to fetch request again after 10 seconds if first request fails
+            retry=True:
+                bool: True if it should try to fetch request again after 10 seconds if first request fails.
 
         returns:
             bool: True if it successfully removes the tag otherwise False.
@@ -223,14 +211,17 @@ class MDEClient:
         return True
 
     def get_machine_vulnrabilities(self):
-        high_cve_url_filter = "$filter=(publishedOn lt 2024-03-11T00:00:00Z) and (severity eq 'High')"
+        high_cve_url_filter = (
+            "$filter=(publishedOn lt 2024-03-11T00:00:00Z) and (severity eq 'High')"
+        )
         high_cve_url = format(
             "https://api.securitycenter.microsoft.com/api/machines/%s/vulnerabilities?%s",
-            self.device_id, 
-            high_cve_url_filter
+            self.device_id,
+            high_cve_url_filter,
         )
 
         requests.get(high_cve_url)
+
 
 class MDEDevice:
     """
@@ -249,9 +240,27 @@ class MDEDevice:
         self,
         uuid: str,
         name: None | str = None,
-        tags: list(str) = [],
+        tags: list[str] = [],
         health: None | str = None,
-    ):
+    ) -> "MDEDevice":
+        """
+        Create a new Microsoft Defender for Endpoint device.
+
+        params:
+            uuid:
+                str: The UUID of the Microsoft Defender for Endpoint device.
+            name=None:
+                str: The name of the Microsoft Defender for Endpoint device.
+                None: No name is provided.
+            tags=[]:
+                list[str]: The tags of the Microsoft Defender for Endpoint device.
+            health=None:
+                str: The health of the Microsoft Defender for Endpoint device.
+                None: No health status is provided.
+
+        returns:
+            MDEDevice: The Microsoft Defender for Endpoint device.
+        """
         self.uuid = uuid
         self.name = name
         self.tags = tags

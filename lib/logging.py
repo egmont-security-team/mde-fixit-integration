@@ -17,6 +17,7 @@ def init_logger() -> logging.Logger:
     returns:
         Logger: The logger instance.
     """
+
     logger = logging.getLogger(__name__)
 
     try:

@@ -57,37 +57,15 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     AZURE_MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
     AZURE_MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
     AZURE_MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
-    if not AZURE_MDE_TENANT or not AZURE_MDE_CLIENT_ID or not AZURE_MDE_SECRET_VALUE:
-        custom_dimensions = {
-            "AZURE_MDE_TENANT": "set" if AZURE_MDE_TENANT else "missing",
-            "AZURE_MDE_CLIENT_ID": "set" if AZURE_MDE_CLIENT_ID else "missing",
-            "AZURE_MDE_SECRET_VALUE": "set" if AZURE_MDE_SECRET_VALUE else "missing",
-        }
-        logger.critical(
-            "Missing some of Azure MDE secrets from the key vault. Please add them or the function can't run.",
-            extra={"custom_dimensions": custom_dimensions},
-        )
-        return
 
     # FixIt secrets
     FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
+    FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
     FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
-    if not FIXIT_4ME_ACCOUNT or not FIXIT_4ME_API_KEY:
-        custom_dimensions = {
-            "FIXIT_4ME_ACCOUNT": "set" if FIXIT_4ME_ACCOUNT else "missing",
-            "FIXIT_4ME_API_KEY": "set" if FIXIT_4ME_API_KEY else "missing",
-        }
-        logger.critical(
-            "Missing FixIt 4Me secrets from key vault. Please add them or the function can't run.",
-            extra={"custom_dimensions": custom_dimensions},
-        )
-        return
 
     mde_client: MDEClient = MDEClient(
         AZURE_MDE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE
     )
-    mde_client.authenticate()
-
     fixit_client = FixItClient(FIXIT_4ME_ACCOUNT, FIXIT_4ME_BASE_URL, FIXIT_4ME_API_KEY)
 
     devices = mde_client.get_devices()
@@ -123,19 +101,10 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             if not request_id:
                 continue
 
-<<<<<<< Updated upstream
-            request_status = get_fixit_request_status(
-                request_id, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
-            )
-
-            if request_status == "completed":
-                if alter_device_tag(mde_token, device_id, tag, "Remove"):
-=======
             request_status = fixit_client.get_request_status(request_id)
 
             if request_status == "completed":
                 if mde_client.alter_device_tag(device, tag, "Remove"):
->>>>>>> Stashed changes
                     removed_fixit_tags += 1
 
     logger.info(
@@ -155,17 +124,6 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
 
     for device_name, devices in devices_sorted_by_name.items():
         for index, device in enumerate(devices):
-<<<<<<< Updated upstream
-            device_id = device.get("id")
-            device_tags = device.get("tags")
-            device_health = device.get("health")
-
-            # If it already have the ZZZ or it isn't inactive, tag skip it
-            if not len(filter(is_zzz_tag, device_tags)) or device_health != "Inactive":
-                continue
-
-            if alter_device_tag(mde_token, device_id, "ZZZ", "Add"):
-=======
             # If it already have the ZZZ or it isn't inactive, skip it
             if (
                 len(list(filter(is_zzz_tag, device.tags)))
@@ -174,7 +132,6 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
                 continue
 
             if device.alter_device_tag("ZZZ", "Add"):
->>>>>>> Stashed changes
                 duplicate_devices_tagged += 1
 
     logger.info(
