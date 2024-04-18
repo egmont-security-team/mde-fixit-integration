@@ -17,6 +17,7 @@ def init_logger() -> logging.Logger:
     returns:
         Logger: The logger instance.
     """
+
     logger = logging.getLogger(__name__)
 
     try:
@@ -26,7 +27,7 @@ def init_logger() -> logging.Logger:
 
     if not connection_string:
         logger.warning(
-            'Couldn\'t setup Application Insights logging since "APPLICATIONINSIGHTS_CONNECTION_STRING" is not present.'
+            'Couldn\'t setup proper Application Insights logging since "APPLICATIONINSIGHTS_CONNECTION_STRING" is not present.'
         )
         return logger
 

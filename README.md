@@ -28,7 +28,9 @@ This checks all devices for FixIt tags and then checks if the referenced tag is 
 
 #### Critical Exposure Requests
 
-Runs: unknown.
+Runs: Every hour on business days.
+
+This checks all devices with CVE in critical severity and creates a ticket in FixIt. If a ticket already exsists for the, the machine this automation will only create a new one if the vulnrability is no longer present for the machine.
 
 #### High Exposure Requests
 
