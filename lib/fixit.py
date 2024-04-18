@@ -14,12 +14,15 @@ class FixItClient:
     A FixIt client that can interact with the FixIt API.
     """
 
-    api_key: str
     base_url: str
     fixit_4me_account: str
+    api_key: str
 
     def __init__(
-        self, api_key: str, base_url: str, fixit_4me_account: str
+        self,
+        base_url: str,
+        fixit_4me_account: str,
+        api_key: str,
     ) -> "FixItClient":
         """
         Create a new FixIt client to interact with the FixIt API.
@@ -35,9 +38,9 @@ class FixItClient:
         returns:
             FixItClient: The FixIt client.
         """
-        self.api_key = api_key
         self.base_url = base_url
         self.fixit_4me_account = fixit_4me_account
+        self.api_key = api_key
 
     def extract_id(string: str) -> str:
         """
@@ -74,10 +77,10 @@ class FixItClient:
         """
 
         res = requests.get(
-            format("%s/requests/%s", self.base_url, request_id),
+            "{}/requests/{}".format(self.base_url, request_id),
             headers={
                 "X-4me-Account": self.fixit_4me_account,
-                "Authorization": format("Bearer %s", self.api_key),
+                "Authorization": "Bearer {}".format(self.api_key),
             },
         )
 
@@ -94,17 +97,15 @@ class FixItClient:
 
             if status_code == 404:
                 logger.error(
-                    format(
-                        'The request "%s" was not found in the FixIt 4me account.',
-                        request_id,
+                    'The request "{}" was not found in the FixIt 4me account.'.format(
+                        request_id
                     ),
                     extra={"custom_dimensions": custom_dimensions},
                 )
             else:
                 logger.error(
-                    format(
-                        'Could not get the request "%s" from the FixIt 4me REST API.',
-                        request_id,
+                    'Could not get the request "{}" from the FixIt 4me REST API.'.format(
+                        request_id
                     ),
                     extra={"custom_dimensions": custom_dimensions},
                 )

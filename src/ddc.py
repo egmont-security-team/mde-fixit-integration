@@ -22,7 +22,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=False,
 )
 def ddc_automation(myTimer: func.TimerRequest) -> None:
@@ -38,9 +38,12 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     logger.info("Started the Data Defender Cleanup tasks.")
 
     credential = DefaultAzureCredential()
-    key_vault_name = os.environ["KEY_VAULT_NAME"]
 
-    if not key_vault_name:
+    try:
+        key_vault_name = os.environ["KEY_VAULT_NAME"]
+        if not key_vault_name:
+            raise KeyError
+    except KeyError:
         logger.critical(
             """
             Did not find environment variable \"KEY_VAULT_NAME\". Please set this 
@@ -50,23 +53,24 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         return
 
     secret_client = SecretClient(
-        vault_url=f"https://{key_vault_name}.vault.azure.net", credential=credential
+        vault_url="https://{}.vault.azure.net".format(key_vault_name),
+        credential=credential,
     )
 
     # MDE secrets
-    AZURE_MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
-    AZURE_MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
-    AZURE_MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
+    MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
+    MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
+    MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
 
     # FixIt secrets
     FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
     FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
     FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
 
-    mde_client: MDEClient = MDEClient(
-        AZURE_MDE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE
+    mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
+    fixit_client: FixItClient = FixItClient(
+        FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
     )
-    fixit_client = FixItClient(FIXIT_4ME_ACCOUNT, FIXIT_4ME_BASE_URL, FIXIT_4ME_API_KEY)
 
     devices = mde_client.get_devices()
     devices_sorted_by_name: dict(str, MDEDevice) = {}
@@ -81,14 +85,7 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
 
     removed_fixit_tags = 0
 
-    for device_payload in devices:
-        device = MDEDevice(
-            device_payload.get("id"),
-            name=device_payload.get("computerDnsName"),
-            tags=device_payload.get("machineTags"),
-            health=device_payload.get("healthStatus"),
-        )
-
+    for device in devices:
         # This is later used to determine if the devices are duplicates.
         if devices_sorted_by_name.get(device.name) is None:
             devices_sorted_by_name[device.name] = [device]
@@ -96,19 +93,21 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
             devices_sorted_by_name[device.name].append(device)
 
         for tag in device.tags:
-            request_id = fixit_client.extract_id(tag)
+            request_id = FixItClient.extract_id(tag)
 
             if not request_id:
                 continue
 
-            request_status = fixit_client.get_request_status(request_id)
+            request_status = fixit_client.get_fixit_request_status(request_id)
 
             if request_status == "completed":
                 if mde_client.alter_device_tag(device, tag, "Remove"):
                     removed_fixit_tags += 1
 
     logger.info(
-        f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal."
+        "Finished removing {} Fix-It tags from devices in the Microsoft Defender portal.".format(
+            removed_fixit_tags
+        )
     )
 
     # Remove devices that only appear once (by name) in the table.
@@ -135,7 +134,9 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
                 duplicate_devices_tagged += 1
 
     logger.info(
-        f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defender portal."
+        "Finished tagging {} duplicate devices in the Microsoft Defender portal.".format(
+            duplicate_devices_tagged
+        )
     )
 
 

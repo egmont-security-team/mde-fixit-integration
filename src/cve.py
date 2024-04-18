@@ -9,16 +9,10 @@ import os
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-import requests
 
 from lib.logging import logger
-from lib.shared import (
-    get_devices,
-    get_mde_token,
-    get_fixit_request_id_from_tag,
-    get_fixit_request_status,
-    alter_device_tag,
-)
+from lib.mde import MDEClient, MDEDevice
+from lib.fixit import FixItClient
 
 
 bp = func.Blueprint()
@@ -35,7 +29,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     TODO: This function is WIP.
     """
 
-    logger.info("CVE cleanup task has started")
+    logger.info("Started the CVE Automation tasks.")
 
     credential = DefaultAzureCredential()
 
@@ -53,26 +47,33 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         return
 
     secret_client = SecretClient(
-        vault_url=f"https://{key_vault_name}.vault.azure.net", credential=credential
+        vault_url="https://{}.vault.azure.net".format(key_vault_name),
+        credential=credential,
     )
 
     # MDE secrets
-    AZURE_MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
-    AZURE_MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
-    AZURE_MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
+    MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
+    MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
+    MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
 
     # FixIt secrets
-    FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
     FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
+    FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
     FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
 
-    mde_token = get_mde_token(
-        AZURE_MDE_TENANT, AZURE_MDE_CLIENT_ID, AZURE_MDE_SECRET_VALUE
+    mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
+    fixit_client: FixItClient = FixItClient(
+        FIXIT_4ME_ACCOUNT, FIXIT_4ME_BASE_URL, FIXIT_4ME_API_KEY
     )
-    devices = get_devices(mde_token)
 
     high_cve_tabel = {}
     critical_cve_tabel = {}
+
+    devices = mde_client.get_devices()
+
+    if not devices:
+        logger.info("Task won't continue as there is no devices to process.")
+        return
 
     for device in devices:
         continue
