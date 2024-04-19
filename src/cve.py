@@ -11,7 +11,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
 from lib.logging import logger
-from lib.mde import MDEClient, MDEDevice
+from lib.mde import MDEClient, MDEDevice, MDEVuln
 from lib.fixit import FixItClient
 
 
@@ -21,7 +21,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=False,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -66,14 +66,31 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         FIXIT_4ME_ACCOUNT, FIXIT_4ME_BASE_URL, FIXIT_4ME_API_KEY
     )
 
-    high_cve_tabel = {}
-    critical_cve_tabel = {}
+    vulnrabilities: list[MDEVuln] = mde_client.get_vulnrabilities()
 
-    devices = mde_client.get_devices()
-
-    if not devices:
-        logger.info("Task won't continue as there is no devices to process.")
+    if not vulnrabilities:
+        logger.info("Task won't continue as there is no vulnrabilities to process.")
         return
 
-    for device in devices:
-        continue
+    multi_fixit_tickets: int = 0
+    single_fixit_tickets: int = 0
+
+    vulnerable_devices: dict[MDEDevice] = {}
+
+    for vuln in vulnrabilities:
+        # TODO: Make device threshold setting
+        if vuln.totalDevices > 20:
+            logger.info("Creating multi FixIt-ticket for {}.".format(vuln))
+            multi_fixit_tickets += 1
+            continue
+    
+        for device in vuln.devices:
+            vulnerable_devices[device.uuid] = device
+        
+    for uuid, device in vulnerable_devices.items():
+        logger.info("Creating single ticket for {}.".format(device))
+        single_fixit_tickets += 1
+    
+    total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
+    logger.info("Created a total of {} FixIt-tickets (multi={}, single={})".format(total_fixit_tickets, multi_fixit_tickets, single_fixit_tickets))
+
