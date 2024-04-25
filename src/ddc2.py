@@ -1,7 +1,7 @@
 """
-This module contains the Azure function that takes care of
-the CVE related stuff. This means creating FixIt tickets for devices
-hit by certain CVE's.
+This module contains the Azure function that takes care of the
+Data Defender cleanup tasks. This means it cleans up duplicate
+devices and removes FixIt tags that has the relative request completed.
 """
 
 import os
@@ -11,7 +11,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
 from lib.logging import logger
-from lib.mde import MDEClient, MDEDevice, MDEVuln
+from lib.mde import MDEClient
 from lib.fixit import FixItClient
 
 
@@ -24,12 +24,17 @@ bp = func.Blueprint()
     run_on_startup=False,
     use_monitor=False,
 )
-def cve_automation(myTimer: func.TimerRequest) -> None:
+def ddc2_automation(myTimer: func.TimerRequest) -> None:
     """
-    TODO: This function is WIP.
+    This is the main Azure Function that takes care of the Data Defender Cleanup tasks.
+    For detailed description of what this does refer to the README.md.
+
+    Actions:
+        - Removes closed FixIt tags from devices.
+        - Adds "ZZZ" tag to duplicate devices.
     """
 
-    logger.info("Started the CVE Automation tasks.")
+    logger.info("Started the Data Defender Cleanup tasks.")
 
     credential = DefaultAzureCredential()
 
@@ -63,38 +68,36 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
     fixit_client: FixItClient = FixItClient(
-        FIXIT_4ME_ACCOUNT, FIXIT_4ME_BASE_URL, FIXIT_4ME_API_KEY
+        FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
     )
 
-    vulnrabilities: list[MDEVuln] = mde_client.get_vulnrabilities()
+    devices = mde_client.get_devices()
 
-    if not vulnrabilities:
-        logger.info("Task won't continue as there is no vulnrabilities to process.")
+    if not devices:
+        logger.info("Task won't continue as there is no devices to process.")
         return
 
-    multi_fixit_tickets: int = 0
-    single_fixit_tickets: int = 0
-
-    vulnerable_devices: dict[MDEDevice] = {}
-
-    for vuln in vulnrabilities:
-        # TODO: Make device threshold setting in Azure portal.
-        if vuln.totalDevices > 20:
-            logger.info("Creating multi FixIt-ticket for {}.".format(vuln))
-            multi_fixit_tickets += 1
-            continue
-
-        for device in vuln.devices:
-            if not device.should_skip(automations={"CVE"}):
-                vulnerable_devices[device.uuid] = device
-
-    for uuid, device in vulnerable_devices.items():
-        logger.info("Creating single ticket for {}.".format(device))
-        single_fixit_tickets += 1
-
-    total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
     logger.info(
-        "Created a total of {} FixIt-tickets (multi={}, single={})".format(
-            total_fixit_tickets, multi_fixit_tickets, single_fixit_tickets
+        "Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal."
+    )
+
+    removed_fixit_tags = 0
+
+    for device in devices:
+        for tag in device.tags:
+            request_id = FixItClient.extract_id(tag)
+
+            if not request_id:
+                continue
+
+            request_status = fixit_client.get_fixit_request_status(request_id)
+
+            if request_status == "completed":
+                if mde_client.alter_device_tag(device, tag, "Remove"):
+                    removed_fixit_tags += 1
+
+    logger.info(
+        "Finished removing {} Fix-It tags from devices in the Microsoft Defender portal.".format(
+            removed_fixit_tags
         )
     )

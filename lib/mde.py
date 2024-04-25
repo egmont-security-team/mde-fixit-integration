@@ -3,6 +3,7 @@ All functions and classes related to Microsoft Defender for Endpoint.
 """
 
 import time
+import re
 import requests
 
 from lib.logging import logger
@@ -169,7 +170,7 @@ class MDEClient:
 
         params:
             device:
-                "MDEDevice": The device to alter the tag from.
+                MDEDevice: The device to alter the tag from.
             tag:
                 str: The tag to alter.
             action:
@@ -351,6 +352,27 @@ class MDEDevice:
         self.tags = tags
         self.health = health
 
+    def __str__(self) -> str:
+        """
+        The device represented as a string.
+        """
+        if self.name:
+            return '"{}" (UUID="{}")'.format(self.name, self.uuid)
+        else:
+            return '"UUID={}"'.format(self.uuid)
+
+    def __eq__(self, other: "MDEDevice") -> bool:
+        """
+        Two devices are equal if their UUID is the same.
+
+        params:
+            other: The device to compare against.
+        """
+        return self.uuid == other.uuid
+
+    def __ne__(self, other: "MDEDevice") -> bool:
+        return not self.__eq__(self, other)
+
     def from_json(json: str) -> "MDEDevice":
         """
         Create a MDEDevice from a JSON payload.
@@ -362,15 +384,50 @@ class MDEDevice:
             health=json.get("health"),
         )
 
-    def __str__(self):
+    def should_skip(self, automations: list[str], cve: None | str = None) -> bool:
         """
-        The device represented as a string.
+        Returns True if this device should be skipped.
+
+        Automation names:
+            DDC2: The Data Defender task 2 (Cleanup FixIt tags).
+            DDC3: The Data Defener task 3 (Cleanup ZZZ tags).
+            CVE: The CVE automation that create tickets for vulnrable devices.
+            CVE-SPECEFIC: Checks if it should skip specefic CVE's.
+
+        params:
+            automations=[]:
+                list[str]: The name of the automations to skip. The names can be found above.
+
+        returns:
+            bool: True if the device should be skipped.
         """
-        logger.info(self.name)
-        if self.name:
-            return '"{}" (UUID="{}")'.format(self.name, self.uuid)
-        else:
-            return '"UUID={}"'.format(self.uuid)
+
+        patterns: list[re.Pattern] = []
+
+        for automation in automations:
+            match automation:
+                case "DDC2":
+                    patterns.append(re.compile(r"^SKIP-DDC2$"))
+                case "DDC3":
+                    patterns.append(re.compile(r"SKIP-DDC3$"))
+                case "CVE":
+                    patterns.append(re.compile(r"^SKIP-CVE$"))
+                case "CVE-SPECEFIC":
+                    patterns.append(
+                        re.compile(r"^SKIP-CVE-\[(?:\*|CVE-\d{4}-\d{4,7})\]$")
+                    )
+                case _:
+                    logger.warn(
+                        'The automation "{}" is not recognized and can therefore not be skipped.'.format(
+                            automation
+                        )
+                    )
+        for tag in self.tags:
+            for pattern in patterns:
+                if re.match(pattern, tag):
+                    return True
+
+        return False
 
 
 class MDEVuln:
@@ -388,7 +445,7 @@ class MDEVuln:
         cveId: str,
         description: None | str = None,
         devices: list["MDEDevice"] = [],
-        totalDevices: None | int = None
+        totalDevices: None | int = None,
     ) -> "MDEVuln":
         """
         Create a new Microsoft Defender for Endpoint vulnerability.
@@ -400,10 +457,13 @@ class MDEVuln:
                 None: No description provided.
                 str: The vulnerability description.
             devices=[]:
-                list["MDEDevice"]: The devices that are affected by the vulnerability.
+                list[MDEDevice]: The devices that are affected by the vulnerability.
             totalDevices=None:
                 None: No total of devices provided.
                 int: The number of devices.
+
+        returns:
+            MDEVuln: The Microsoft Defender Vulnreability.
         """
 
         self.cveId = cveId
@@ -432,7 +492,7 @@ class MDEVuln:
             json.get("CveId"),
             description=json.get("VulnerabilityDescription"),
             devices=devices,
-            totalDevices=json.get("TotalMachines")
+            totalDevices=json.get("TotalMachines"),
         )
 
     def __str__(self):

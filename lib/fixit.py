@@ -64,7 +64,7 @@ class FixItClient:
         # This removes the "#" and optional spaces from the tag.
         return re.sub(r"#( )*", "", string)
 
-    def get_fixit_request_status(self, request_id: str) -> str:
+    def get_fixit_request_status(self, request_id: str) -> str | None:
         """
         Gets the status of the FixIt request relative to the request id given.
 
@@ -110,6 +110,39 @@ class FixItClient:
                     extra={"custom_dimensions": custom_dimensions},
                 )
 
-            return ""
+            return
 
         return json.get("status")
+
+    def create_fixit_requests(self, category: str, created_by: str):
+        """
+        Create a FixIt request in the FixIt 4me account.
+        """
+
+        payload = {category: category, created_by: created_by}
+        res = requests.post(
+            "{}/request".format(self.base_url),
+            headers={
+                "X-4me-Account": self.fixit_4me_account,
+                "Authorization": "Bearer {}".format(self.api_key),
+            },
+        )
+
+        status_code = res.status_code
+        json = res.json()
+
+        if status_code != 200:
+            custom_dimensions = {
+                "base_url": self.base_url,
+                "X-4me-Account": self.fixit_4me_account,
+                "status": status_code,
+                "body": res.content,
+            }
+            logger.error(
+                "Couldn't create the FixIt 4me request.",
+                extra={"custom_dimensions": custom_dimensions},
+            )
+
+            return ""
+
+        return
