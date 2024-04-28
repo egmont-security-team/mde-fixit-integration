@@ -66,10 +66,10 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         FIXIT_4ME_ACCOUNT, FIXIT_4ME_BASE_URL, FIXIT_4ME_API_KEY
     )
 
-    vulnrabilities: list[MDEVuln] = mde_client.get_vulnrabilities()
+    vulnerabilities: list[MDEVuln] = mde_client.get_vulnerabilities()
 
-    if not vulnrabilities:
-        logger.info("Task won't continue as there is no vulnrabilities to process.")
+    if not vulnerabilities:
+        logger.info("Task won't continue as there is no vulnerabilities to process.")
         return
 
     multi_fixit_tickets: int = 0
@@ -77,14 +77,14 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     vulnerable_devices: dict[MDEDevice] = {}
 
-    for vuln in vulnrabilities:
+    for v in vulnerabilities:
         # TODO: Make device threshold setting in Azure portal.
-        if vuln.totalDevices > 20:
-            logger.info("Creating multi FixIt-ticket for {}.".format(vuln))
+        if v.totalDevices > 20:
+            logger.info("Creating multi FixIt-ticket for {}.".format(v))
             multi_fixit_tickets += 1
             continue
 
-        for device in vuln.devices:
+        for device in v.devices:
             if not device.should_skip(automations={"CVE"}):
                 vulnerable_devices[device.uuid] = device
 

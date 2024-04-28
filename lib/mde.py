@@ -28,7 +28,7 @@ class MDEClient:
         authenticate=True,
     ) -> "MDEClient":
         """
-        Create a new Micosoft Defender for Endpoint client to interact with the MDE API.
+        Create a new Microsoft Defender for Endpoint client to interact with the MDE API.
 
         params:
             azure_mde_tenant:
@@ -100,7 +100,7 @@ class MDEClient:
 
         params:
             odata_filter:
-                str: An OData fitler to filter the devices.
+                str: An OData filter to filter the devices.
 
         returns:
             list["MDEDevice"]: The machines from Microsoft Defender for Endpoint.
@@ -138,7 +138,7 @@ class MDEClient:
                 )
             )
 
-            # Turn the JSON paylaods from MDE into MDEDevice objects.
+            # Turn the JSON payloads from MDE into MDEDevice objects.
             for payload in new_devices:
                 try:
                     devices.append(MDEDevice.from_json(payload))
@@ -166,7 +166,7 @@ class MDEClient:
         self, device: "MDEDevice", tag: str, action: str, retry=True
     ) -> bool:
         """
-        Alters a tag for a given device using Mirosoft Defender for Endpoint.
+        Alters a tag for a given device using Microsoft Defender for Endpoint.
 
         params:
             device:
@@ -233,7 +233,7 @@ class MDEClient:
 
         return True
 
-    def get_vulnrabilities(self) -> list["MDEVuln"]:
+    def get_vulnerabilities(self) -> list["MDEVuln"]:
         """
         Get the vulnerabilities of the machine.
 
@@ -384,19 +384,19 @@ class MDEDevice:
             health=json.get("health"),
         )
 
-    def should_skip(self, automations: list[str], cve: None | str = None) -> bool:
+    def should_skip(self, automation_names: list[str], cve: None | str = None) -> bool:
         """
         Returns True if this device should be skipped.
 
         Automation names:
             DDC2: The Data Defender task 2 (Cleanup FixIt tags).
-            DDC3: The Data Defener task 3 (Cleanup ZZZ tags).
-            CVE: The CVE automation that create tickets for vulnrable devices.
-            CVE-SPECEFIC: Checks if it should skip specefic CVE's.
+            DDC3: The Data Defender task 3 (Cleanup ZZZ tags).
+            CVE: The CVE automation that create tickets for vulnerable devices.
+            CVE-SPECIFIC: Checks if it should skip specific CVE's.
 
         params:
-            automations=[]:
-                list[str]: The name of the automations to skip. The names can be found above.
+            automation_names=[]:
+                list[str]: The name of the automation to skip. The names can be found above.
 
         returns:
             bool: True if the device should be skipped.
@@ -404,7 +404,7 @@ class MDEDevice:
 
         patterns: list[re.Pattern] = []
 
-        for automation in automations:
+        for automation in automation_names:
             match automation:
                 case "DDC2":
                     patterns.append(re.compile(r"^SKIP-DDC2$"))
@@ -412,9 +412,9 @@ class MDEDevice:
                     patterns.append(re.compile(r"SKIP-DDC3$"))
                 case "CVE":
                     patterns.append(re.compile(r"^SKIP-CVE$"))
-                case "CVE-SPECEFIC":
+                case "CVE-SPECIFIC":
                     patterns.append(
-                        re.compile(r"^SKIP-CVE-\[(?:\*|CVE-\d{4}-\d{4,7})\]$")
+                        re.compile(r"^SKIP-CVE-\[(?<CVE>\*|CVE-\d{4}-\d{4,7})\]$")
                     )
                 case _:
                     logger.warn(
@@ -422,9 +422,14 @@ class MDEDevice:
                             automation
                         )
                     )
+
         for tag in self.tags:
             for pattern in patterns:
-                if re.match(pattern, tag):
+                if m := re.match(pattern, tag):
+                    groups = m.groupdict()
+                    cve_from_tag = groups.get("CVE")
+                    if cve_from_tag == cve or cve_from_tag == "*":
+                        continue
                     return True
 
         return False
@@ -463,7 +468,7 @@ class MDEVuln:
                 int: The number of devices.
 
         returns:
-            MDEVuln: The Microsoft Defender Vulnreability.
+            MDEVuln: The Microsoft Defender Vulnerability.
         """
 
         self.cveId = cveId
