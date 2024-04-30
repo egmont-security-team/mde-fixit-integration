@@ -78,14 +78,14 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     vulnerable_devices: dict[MDEDevice] = {}
 
     for v in vulnerabilities:
-        # TODO: Make device threshold setting in Azure portal.
+        # TODO: Make device threshold setting in Azure portal. (20 is current threshold)
         if v.totalDevices > 20:
             logger.info("Creating multi FixIt-ticket for {}.".format(v))
             multi_fixit_tickets += 1
             continue
 
         for device in v.devices:
-            if not device.should_skip(automations={"CVE"}):
+            if not device.should_skip(automation_names={"CVE"}):
                 vulnerable_devices[device.uuid] = device
 
     for uuid, device in vulnerable_devices.items():

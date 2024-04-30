@@ -407,14 +407,14 @@ class MDEDevice:
         for automation in automation_names:
             match automation:
                 case "DDC2":
-                    patterns.append(re.compile(r"^SKIP-DDC2$"))
+                    patterns.append((0, re.compile(r"^SKIP-DDC2$")))
                 case "DDC3":
-                    patterns.append(re.compile(r"SKIP-DDC3$"))
+                    patterns.append((1, re.compile(r"^SKIP-DDC3$")))
                 case "CVE":
-                    patterns.append(re.compile(r"^SKIP-CVE$"))
+                    patterns.append((2, re.compile(r"^SKIP-CVE$")))
                 case "CVE-SPECIFIC":
                     patterns.append(
-                        re.compile(r"^SKIP-CVE-\[(?<CVE>\*|CVE-\d{4}-\d{4,7})\]$")
+                        (3, re.compile(r"^SKIP-CVE-\[(?P<CVE>\*|CVE-\d{4}-\d{4,7})\]$"))
                     )
                 case _:
                     logger.warn(
@@ -424,12 +424,14 @@ class MDEDevice:
                     )
 
         for tag in self.tags:
-            for pattern in patterns:
+            for i, pattern in patterns:
                 if m := re.match(pattern, tag):
-                    groups = m.groupdict()
-                    cve_from_tag = groups.get("CVE")
-                    if cve_from_tag == cve or cve_from_tag == "*":
-                        continue
+                    # Special logic for pattern 3
+                    if i == 3:
+                        groups = m.groupdict()
+                        cve_from_tag = groups.get("CVE")
+                        if cve_from_tag != cve and cve_from_tag != "*":
+                            continue
                     return True
 
         return False
