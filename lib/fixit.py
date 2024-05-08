@@ -7,6 +7,7 @@ import re
 import requests
 
 from lib.logging import logger
+from lib.mde import MDEDevice, MDEVulnerability
 
 
 class FixItClient:
@@ -84,10 +85,8 @@ class FixItClient:
             },
         )
 
-        status_code = res.status_code
-        json = res.json()
-
-        if status_code != 200:
+        if not res.ok:
+            status_code = res.status_code
             custom_dimensions = {
                 "base_url": self.base_url,
                 "X-4me-Account": self.fixit_4me_account,
@@ -112,37 +111,60 @@ class FixItClient:
 
             return
 
-        return json.get("status")
+        return res.json().get("status")
 
-    def create_fixit_requests(self, category: str, created_by: str):
+    def create_fixit_requests(self, device: MDEDevice, vulnerability: MDEVulnerability, recommendations: str):
         """
         Create a FixIt request in the FixIt 4me account.
+
+        TODO: Comment
         """
 
-        payload = {category: category, created_by: created_by}
+        payload = {
+            "subject": "Security[CVE-2024-58739]: Vulnerable Device",
+            # The template ID from FixIt.
+            "template_id": "186253",
+            # Custom template fields.
+            "custom_fields": [
+                {"id": "cve", "value": vulnerability.cveId},
+                {"id": "software_name", "value": vulnerability.softwareName},
+                {"id": "software_vendor", "value": vulnerability.softwareVendor},
+                {"id": "device_name", "value": device.name},
+                {"id": "device_uuid", "value": device.uuid},
+                {"id": "recommended_security_updates", "value": "\n".join(recommendations)}
+            ],
+        }
         res = requests.post(
-            "{}/request".format(self.base_url),
+            "{}/requests".format(self.base_url),
             headers={
                 "X-4me-Account": self.fixit_4me_account,
                 "Authorization": "Bearer {}".format(self.api_key),
             },
+            json=payload,
         )
 
-        status_code = res.status_code
-        json = res.json()
-
-        if status_code != 200:
+        if not res.ok:
+            status_code = res.status_code
             custom_dimensions = {
                 "base_url": self.base_url,
                 "X-4me-Account": self.fixit_4me_account,
                 "status": status_code,
                 "body": res.content,
             }
-            logger.error(
-                "Couldn't create the FixIt 4me request.",
-                extra={"custom_dimensions": custom_dimensions},
-            )
+            logger.error(custom_dimensions)
 
-            return ""
-
-        return
+            if status_code == 404:
+                logger.error(
+                    "Couldn't find the FixIt 4me template",
+                    extra={"custom_dimensions": custom_dimensions},
+                )
+            elif status_code == 401:
+                logger.error(
+                    "Unauthorized for creating the FixIt 4me request",
+                    extra={"custom_dimensions": custom_dimensions},
+                )
+            else:
+                logger.error(
+                    "Couldn't create the FixIt 4me request.",
+                    extra={"custom_dimensions": custom_dimensions},
+                )

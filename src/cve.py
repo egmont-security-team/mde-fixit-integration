@@ -11,7 +11,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
 from lib.logging import logger
-from lib.mde import MDEClient, MDEDevice, MDEVuln
+from lib.mde import MDEClient, MDEDevice, MDEVulnerability
 from lib.fixit import FixItClient
 
 
@@ -21,7 +21,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=False,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -57,16 +57,16 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
 
     # FixIt secrets
-    FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
     FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
+    FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
     FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
 
     mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
     fixit_client: FixItClient = FixItClient(
-        FIXIT_4ME_ACCOUNT, FIXIT_4ME_BASE_URL, FIXIT_4ME_API_KEY
+        FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
     )
 
-    vulnerabilities: list[MDEVuln] = mde_client.get_vulnerabilities()
+    vulnerabilities: list[MDEVulnerability] = mde_client.get_vulnerabilities()
 
     if not vulnerabilities:
         logger.info("Task won't continue as there is no vulnerabilities to process.")
@@ -77,20 +77,33 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     vulnerable_devices: dict[MDEDevice] = {}
 
-    for v in vulnerabilities:
+    for vulnerability in vulnerabilities:
         # TODO: Make device threshold setting in Azure portal. (20 is current threshold)
-        if v.totalDevices > 20:
-            logger.info("Creating multi FixIt-ticket for {}.".format(v))
+        if len(vulnerability.devices) > 20:
+            logger.info("Creating multi FixIt-ticket for {}.".format(vulnerability))
             multi_fixit_tickets += 1
             continue
 
-        for device in v.devices:
-            if not device.should_skip(automation_names={"CVE"}):
-                vulnerable_devices[device.uuid] = device
+        for device in vulnerability.devices:
+            if not device.should_skip(automations=["CVE"]) and not vulnerable_devices.get(device.uuid):
+                vulnerable_devices[device.uuid] = {
+                    "device": device,
+                    "vulnerability": vulnerability, 
+                }
 
-    for uuid, device in vulnerable_devices.items():
+    for uuid, info in vulnerable_devices.items():
+        device = info.get("device")
+        vulnerability = info.get("vulnerability")
+
         logger.info("Creating single ticket for {}.".format(device))
+
+        recommendations = mde_client.get_device_recommendations(device)
+        if len(recommendations) < 0:
+            continue
+
+        fixit_client.create_fixit_requests(device, vulnerability, recommendations)
         single_fixit_tickets += 1
+        break
 
     total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
     logger.info(

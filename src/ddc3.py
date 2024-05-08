@@ -71,6 +71,9 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
         return
 
     for device in devices:
+        if device.should_skip(automations=["DDC3"]):
+            continue
+
         # This is later used to determine if the devices are duplicates.
         if devices_sorted_by_name.get(device.name) is None:
             devices_sorted_by_name[device.name] = [device]

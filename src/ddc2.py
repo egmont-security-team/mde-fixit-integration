@@ -84,6 +84,9 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
     removed_fixit_tags = 0
 
     for device in devices:
+        if device.should_skip(automation_names=["DDC2"]):
+            continue
+
         for tag in device.tags:
             request_id = FixItClient.extract_id(tag)
 
