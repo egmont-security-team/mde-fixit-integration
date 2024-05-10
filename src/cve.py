@@ -85,25 +85,45 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             continue
 
         for device in vulnerability.devices:
-            if not device.should_skip(automations=["CVE"]) and not vulnerable_devices.get(device.uuid):
+            if not device.should_skip(
+                automations=["CVE"]
+            ) and not vulnerable_devices.get(device.uuid):
                 vulnerable_devices[device.uuid] = {
                     "device": device,
-                    "vulnerability": vulnerability, 
+                    "vulnerability": vulnerability,
                 }
 
     for uuid, info in vulnerable_devices.items():
         device = info.get("device")
         vulnerability = info.get("vulnerability")
 
-        logger.info("Creating single ticket for {}.".format(device))
-
-        recommendations = mde_client.get_device_recommendations(device)
-        if len(recommendations) < 0:
+        if any(FixItClient.extract_id(tag) for tag in device.tags):
+            logger.info(
+                "Skipping {} because it has a fixit request tag.".format(device)
+            )
             continue
 
-        fixit_client.create_fixit_requests(device, vulnerability, recommendations)
-        single_fixit_tickets += 1
-        break
+        recommendations = mde_client.get_device_recommendations(device)
+        if len(recommendations) < 1:
+            logger.warning(
+                "Skipping {} because is has no security recommendations.".format(device)
+            )
+            continue
+
+        logger.info("Creating single ticket for {}.".format(device))
+
+        fixit_id = fixit_client.create_single_device_fixit_requests(
+            device, vulnerability, recommendations
+        )
+
+        if fixit_id:
+            if not mde_client.alter_device_tag(device, "#{}".format(fixit_id), "Add"):
+                logger.error(
+                    'Created FixIt ticket "#{}" but failed to give {} a tag.'.format(
+                        fixit_id, device
+                    )
+                )
+            single_fixit_tickets += 1
 
     total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
     logger.info(

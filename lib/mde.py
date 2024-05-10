@@ -182,9 +182,9 @@ class MDEClient:
 
         res = requests.post(
             "https://api.securitycenter.microsoft.com/api/machines/{}/tags".format(
-                device.device_id
+                device.uuid
             ),
-            headers={"Authorization": "Bearer {}".format(self.token)},
+            headers={"Authorization": "Bearer {}".format(self.api_token)},
             json={
                 "Value": tag,
                 "Action": action,
@@ -209,23 +209,23 @@ class MDEClient:
                 )
                 time.sleep(10)
                 self.alter_device_tag(tag, action, retry=False)
-                return
-
-            logger.error(
-                'Could\'t perform action "{}" with tag "{}" on device {}.'.format(
-                    action,
-                    tag,
-                    device,
-                ),
-                extra={"custom_dimensions": custom_dimensions},
-            )
+            else:
+                logger.error(
+                    'Could\'t perform action "{}" with tag "{}" on device {}.'.format(
+                        action,
+                        tag,
+                        device,
+                    ),
+                    extra={"custom_dimensions": custom_dimensions},
+                )
 
             return False
 
         logger.info(
-            'Performed action "{}" with tag "{}" on device.'.format(
-                action.tag,
-                device,
+            'Performed action "{}" with tag "{}" on device {}.'.format(
+                action,
+                tag,
+                device
             )
         )
 
@@ -242,15 +242,23 @@ class MDEClient:
         kudos_query: str = """
         DeviceTvmSoftwareVulnerabilities
         | where VulnerabilitySeverityLevel == 'Critical'
-        | join kind=leftouter DeviceTvmSoftwareVulnerabilitiesKB on CveId
-        | where PublishedDate <= datetime_add('day', -25, now())
-        | join kind=leftouter (
+        | join kind=innerunique (
+            DeviceTvmSoftwareVulnerabilitiesKB
+            | where PublishedDate <= datetime_add('day', -25, now())
+            | project CveId
+        ) on CveId
+        | join kind=fullouter (
             DeviceInfo
             | where IsExcluded == false
-            | project DeviceId, DeviceManualTags, LoggedOnUsers
+            | summarize arg_max(Timestamp, *) by DeviceId 
+            | extend MachineInfo = pack(
+                'DeviceId', DeviceId,
+                'DeviceName', DeviceName,
+                'Tags', parse_json(DeviceManualTags),
+                'Users', parse_json(LoggedOnUsers)
+            )
         ) on DeviceId
-        | extend MachineInfo = pack('DeviceId', DeviceId, 'DeviceName', DeviceName, 'Tags', DeviceManualTags, 'LoggedOnUsers', LoggedOnUsers)
-        | summarize Machines = make_set(MachineInfo) by CveId, VulnerabilityDescription, SoftwareName, SoftwareVendor
+        | summarize Machines = make_set(MachineInfo) by CveId, SoftwareName, SoftwareVendor
         """
         cve_url: str = (
             "https://api.securitycenter.microsoft.com/api/advancedqueries/run"
@@ -313,10 +321,8 @@ class MDEClient:
     ) -> list[str]:
         recommendations = []
 
-        recommendation_url: str = (
-            "https://api-eu.securitycenter.microsoft.com/api/machines/{}/recommendations?$filter={}".format(
-                device.uuid, odata_filter
-            )
+        recommendation_url: str = "https://api-eu.securitycenter.microsoft.com/api/machines/{}/recommendations?$filter={}".format(
+            device.uuid, odata_filter
         )
 
         while recommendation_url:
@@ -326,9 +332,8 @@ class MDEClient:
             )
 
             if not res.ok:
-                status_code = res.status_code
                 custom_dimensions = {
-                    "status": status_code,
+                    "status": res.status_code,
                     "body": res.content,
                     "device": device,
                 }
@@ -350,7 +355,7 @@ class MDEClient:
             )
 
             for recommendation in new_recommendations:
-                name = recommendations.get("recommendationName")
+                name = recommendation.get("recommendationName")
                 if name:
                     recommendations.append(name)
 
@@ -362,7 +367,7 @@ class MDEClient:
             )
         )
 
-        return recommendations 
+        return recommendations
 
 
 class MDEDevice:
@@ -541,7 +546,6 @@ class MDEVulnerability:
         returns:
             MDEVulnerability: The Microsoft Defender Vulnerability.
         """
-
         self.cveId = cveId
         self.description = description
         self.devices = devices
@@ -576,7 +580,8 @@ class MDEVulnerability:
                 MDEDevice(
                     payload.get("DeviceId"),
                     name=payload.get("DeviceName"),
-                    tags=payload.get("Tags"),
+                    users=payload.get("LoggedOnUsers") or [],
+                    tags=payload.get("Tags") or [],
                 )
             )
 

@@ -23,7 +23,7 @@ def test_skip_device_cve():
 
     not_skipped_machines = list(
         filter(
-            lambda device: not MDEDevice.should_skip(device, automation_names=["CVE"]),
+            lambda device: not MDEDevice.should_skip(device, automations=["CVE"]),
             devices,
         )
     )
@@ -38,7 +38,7 @@ def test_skip_device_cve():
     not_skipped_machines_specific = list(
         filter(
             lambda device: not MDEDevice.should_skip(
-                device, automation_names=["CVE-SPECIFIC"], cve="CVE-2021-4104"
+                device, automations=["CVE-SPECIFIC"], cve="CVE-2021-4104"
             ),
             devices,
         )
@@ -56,7 +56,7 @@ def test_skip_device_ddc2():
 
     not_skipped_machines = list(
         filter(
-            lambda device: not MDEDevice.should_skip(device, automation_names=["DDC2"]),
+            lambda device: not MDEDevice.should_skip(device, automations=["DDC2"]),
             devices,
         )
     )
@@ -72,7 +72,7 @@ def test_skip_device_ddc3():
 
     not_skipped_machines = list(
         filter(
-            lambda device: not MDEDevice.should_skip(device, automation_names=["DDC3"]),
+            lambda device: not MDEDevice.should_skip(device, automations=["DDC3"]),
             devices,
         )
     )
@@ -91,7 +91,7 @@ def test_skip_device_multiple():
         filter(
             lambda device: not MDEDevice.should_skip(
                 device,
-                automation_names=["DDC3", "CVE", "CVE-SPECIFIC"],
+                automations=["DDC3", "CVE", "CVE-SPECIFIC"],
                 cve="CVE-2021-4104",
             ),
             devices,

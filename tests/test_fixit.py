@@ -5,6 +5,6 @@ def test_extract_id():
     for tag in valid_tags:
         assert FixItClient.extract_id(tag)
     
-    invalid_tags = ["12315123", "3141", "DAE", "ZZZ", "#Abekat", "#ajsd"]
+    invalid_tags = ["8792375", "DAE", "ZZZ", "#Abekat", "#ajsd" , "A#51233",  "#51233A"]
     for tag in invalid_tags:
         assert not FixItClient.extract_id(tag)
