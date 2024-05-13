@@ -17,7 +17,6 @@ class MDEClient:
     azure_mde_tenant: str
     azure_mde_client_id: str
     azure_mde_secret_value: str
-
     api_token: None | str
 
     def __init__(
@@ -223,9 +222,7 @@ class MDEClient:
 
         logger.info(
             'Performed action "{}" with tag "{}" on device {}.'.format(
-                action,
-                tag,
-                device
+                action, tag, device
             )
         )
 
@@ -249,11 +246,13 @@ class MDEClient:
         ) on CveId
         | join kind=fullouter (
             DeviceInfo
-            | where IsExcluded == false
-            | summarize arg_max(Timestamp, *) by DeviceId 
+            | where IsExcluded == false and isnotempty(OSPlatform)
+            | summarize arg_max(Timestamp, *) by DeviceId
+            | project-away Timestamp
             | extend MachineInfo = pack(
                 'DeviceId', DeviceId,
                 'DeviceName', DeviceName,
+                'OS', OSPlatform,
                 'Tags', parse_json(DeviceManualTags),
                 'Users', parse_json(LoggedOnUsers)
             )
@@ -317,7 +316,7 @@ class MDEClient:
     def get_device_recommendations(
         self,
         device: "MDEDevice",
-        odata_filter="(recommendationCategory ne 'Account') and (recommendationCategory ne 'OS')",
+        odata_filter="remediationType eq 'Update'",
     ) -> list[str]:
         recommendations = []
 
@@ -381,6 +380,7 @@ class MDEDevice:
     uuid: str
     name: None | str
     health: None | str
+    os: None | str
     users: list[str]
     tags: list[str]
 
@@ -389,6 +389,7 @@ class MDEDevice:
         uuid: str,
         name: None | str = None,
         health: None | str = None,
+        os: None | str = None,
         users: list[str] = [],
         tags: list[str] = [],
     ) -> "MDEDevice":
@@ -415,6 +416,7 @@ class MDEDevice:
         self.uuid = uuid
         self.name = name
         self.health = health
+        self.os = os
         self.users = users
         self.tags = tags
 
@@ -448,6 +450,7 @@ class MDEDevice:
             name=json.get("computerDnsName"),
             tags=json.get("machineTags"),
             health=json.get("health"),
+            os=json.get("osPlatform"),
         )
 
     def should_skip(self, automations: list[str], cve: None | str = None) -> bool:
@@ -556,8 +559,8 @@ class MDEVulnerability:
         """
         The vulnerability represented as a string.
         """
-        if len(self.devices) > 0:
-            return '"{}" (TotalDevices: {})'.format(self.cveId, self.totalDevices)
+        if len(self.devices) > 5:
+            return '"{}" (TotalDevices: {})'.format(self.cveId, len(self.devices))
         else:
             return '"{}"'.format(self.cveId)
 
@@ -579,7 +582,8 @@ class MDEVulnerability:
             devices.append(
                 MDEDevice(
                     payload.get("DeviceId"),
-                    name=payload.get("DeviceName"),
+                    name=payload.get("DeviceName") or "Unknown",
+                    os=payload.get("OS") or "Unknown",
                     users=payload.get("LoggedOnUsers") or [],
                     tags=payload.get("Tags") or [],
                 )

@@ -74,7 +74,7 @@ class FixItClient:
                 str: The request id of the request to check.
 
         returns:
-            The status of the request.
+            str: The status of the request.
         """
 
         res = requests.get(
@@ -113,11 +113,24 @@ class FixItClient:
 
         return res.json().get("status")
 
-    def create_single_device_fixit_requests(self, device: MDEDevice, vulnerability: MDEVulnerability, recommendations: str) -> str:
+    def create_single_device_fixit_requests(
+        self, device: MDEDevice, vulnerability: MDEVulnerability, recommendations: str
+    ) -> str:
         """
         Create a FixIt request in the FixIt 4me account.
 
-        TODO: Comment
+        params:
+            device:
+                MDEDevice: The device to create a vulnerability request for.
+
+            vulnerability:
+                MDEVulnerability: The vulnerablility affecting the device.
+
+            recommendations:
+                str: The security recommendations to fix the vulnerability (and other stuff on the device).
+
+        returns:
+            str: The ID of the created request.
         """
 
         payload = {
@@ -131,8 +144,12 @@ class FixItClient:
                 {"id": "software_vendor", "value": vulnerability.softwareVendor},
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
+                {"id": "device_os", "value": device.os},
                 {"id": "device_users", "value": ", ".join(device.users) or "Unknown"},
-                {"id": "recommended_security_updates", "value": "\n".join(recommendations)}
+                {
+                    "id": "recommended_security_updates",
+                    "value": "\n".join(recommendations),
+                },
             ],
         }
         res = requests.post(
@@ -168,7 +185,7 @@ class FixItClient:
                     "Couldn't create the FixIt 4me request.",
                     extra={"custom_dimensions": custom_dimensions},
                 )
-            
+
             return ""
-        
+
         return res.json().get("id")

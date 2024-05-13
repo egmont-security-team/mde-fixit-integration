@@ -74,6 +74,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     multi_fixit_tickets: int = 0
     single_fixit_tickets: int = 0
+    servers_total: int = 0
 
     vulnerable_devices: dict[MDEDevice] = {}
 
@@ -96,6 +97,9 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     for uuid, info in vulnerable_devices.items():
         device = info.get("device")
         vulnerability = info.get("vulnerability")
+
+        if device.os.startswith("WindowsServer"):
+            servers_total += 1
 
         if any(FixItClient.extract_id(tag) for tag in device.tags):
             logger.info(
@@ -127,7 +131,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
     logger.info(
-        "Created a total of {} FixIt-tickets (multi={}, single={})".format(
-            total_fixit_tickets, multi_fixit_tickets, single_fixit_tickets
+        "Created a total of {} FixIt-tickets (multi={}, single={}, servers={})".format(
+            total_fixit_tickets, multi_fixit_tickets, single_fixit_tickets, servers_total
         )
     )
