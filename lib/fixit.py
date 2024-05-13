@@ -139,9 +139,9 @@ class FixItClient:
             "template_id": "186253",
             # Custom template fields.
             "custom_fields": [
-                {"id": "cve", "value": vulnerability.cveId},
-                {"id": "software_name", "value": vulnerability.softwareName},
-                {"id": "software_vendor", "value": vulnerability.softwareVendor},
+                {"id": "cve", "value": vulnerability.cveId or vulnerability.uuid},
+                {"id": "software_name", "value": vulnerability.softwareName or "Unknown"},
+                {"id": "software_vendor", "value": vulnerability.softwareVendor or "Unknown"},
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
                 {"id": "device_os", "value": device.os},

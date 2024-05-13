@@ -74,7 +74,6 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     multi_fixit_tickets: int = 0
     single_fixit_tickets: int = 0
-    servers_total: int = 0
 
     vulnerable_devices: dict[MDEDevice] = {}
 
@@ -87,7 +86,8 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         for device in vulnerability.devices:
             if not device.should_skip(
-                automations=["CVE"]
+                automations=["CVE-SPECIFIC"],
+                cve=vulnerability.cveId
             ) and not vulnerable_devices.get(device.uuid):
                 vulnerable_devices[device.uuid] = {
                     "device": device,
@@ -98,8 +98,11 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         device = info.get("device")
         vulnerability = info.get("vulnerability")
 
-        if device.os.startswith("WindowsServer"):
-            servers_total += 1
+        if not device.should_skip(
+            automations=["CVE-SPECIFIC"],
+            cve=vulnerability.cveId
+        ) and not vulnerable_devices.get(device.uuid):
+            continue
 
         if any(FixItClient.extract_id(tag) for tag in device.tags):
             logger.info(
@@ -115,7 +118,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             continue
 
         logger.info("Creating single ticket for {}.".format(device))
-
+        break
         fixit_id = fixit_client.create_single_device_fixit_requests(
             device, vulnerability, recommendations
         )
@@ -131,7 +134,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
     logger.info(
-        "Created a total of {} FixIt-tickets (multi={}, single={}, servers={})".format(
-            total_fixit_tickets, multi_fixit_tickets, single_fixit_tickets, servers_total
+        "Created a total of {} FixIt-tickets (multi={}, single={}, looked_at_devices={})".format(
+            total_fixit_tickets, multi_fixit_tickets, single_fixit_tickets, len(list(vulnerable_devices.keys()))
         )
     )

@@ -244,7 +244,7 @@ class MDEClient:
             | where PublishedDate <= datetime_add('day', -25, now())
             | project CveId
         ) on CveId
-        | join kind=fullouter (
+        | join kind=inner (
             DeviceInfo
             | where IsExcluded == false and isnotempty(OSPlatform)
             | summarize arg_max(Timestamp, *) by DeviceId
@@ -513,16 +513,18 @@ class MDEVulnerability:
     A class that represents a Microsoft Defender for Endpoint vulnerability.
     """
 
-    cveId: str
+    uuid: str
     devices: list["MDEDevice"]
+    cveId: None | str
     description: None | str
     softwareName: None | str
     softwareVendor: None | str
 
     def __init__(
         self,
-        cveId: str,
+        uuid: str,
         devices: list["MDEDevice"] = [],
+        cveId: None | str = None,
         description: None | str = None,
         softwareName: None | str = None,
         softwareVendor: None | str = None,
@@ -531,8 +533,9 @@ class MDEVulnerability:
         Create a new Microsoft Defender for Endpoint vulnerability.
 
         params:
-            cveId:
+            cveId=None:
                 str: The UUID of the Microsoft Defender for Endpoint vulnerability.
+                None: Not CVE ID is provided.
             description=None:
                 None: No description provided.
                 str: The vulnerability description.
@@ -590,7 +593,8 @@ class MDEVulnerability:
             )
 
         return MDEVulnerability(
-            json.get("CveId"),
+            json.get("id"),
+            cveId=json.get("CveId"),
             devices=devices,
             description=json.get("VulnerabilityDescription"),
             softwareName=json.get("SoftwareName"),
