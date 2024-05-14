@@ -21,7 +21,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=False,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
