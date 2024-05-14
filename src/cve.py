@@ -118,7 +118,6 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             continue
 
         logger.info("Creating single ticket for {}.".format(device))
-        break
         fixit_id = fixit_client.create_single_device_fixit_requests(
             device, vulnerability, recommendations
         )

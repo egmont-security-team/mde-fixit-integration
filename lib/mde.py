@@ -239,7 +239,7 @@ class MDEClient:
         kudos_query: str = """
         DeviceTvmSoftwareVulnerabilities
         | where VulnerabilitySeverityLevel == 'Critical'
-        | join kind=innerunique (
+        | join kind=inner (
             DeviceTvmSoftwareVulnerabilitiesKB
             | where PublishedDate <= datetime_add('day', -25, now())
             | project CveId
