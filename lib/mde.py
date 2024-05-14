@@ -246,7 +246,7 @@ class MDEClient:
         ) on CveId
         | join kind=inner (
             DeviceInfo
-            | where IsExcluded == false and isnotempty(OSPlatform)
+            | where IsExcluded == false and isnotempty(OSPlatform) and SensorHealthState == "Active"
             | summarize arg_max(Timestamp, *) by DeviceId
             | project-away Timestamp
             | extend MachineInfo = pack(
