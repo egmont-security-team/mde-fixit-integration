@@ -2,8 +2,8 @@
 All functions and classes related to Microsoft Defender for Endpoint.
 """
 
-from datetime import datetime, timedelta
 import time
+import re
 import requests
 
 from lib.logging import logger
@@ -17,7 +17,6 @@ class MDEClient:
     azure_mde_tenant: str
     azure_mde_client_id: str
     azure_mde_secret_value: str
-
     api_token: None | str
 
     def __init__(
@@ -28,7 +27,7 @@ class MDEClient:
         authenticate=True,
     ) -> "MDEClient":
         """
-        Create a new Micosoft Defender for Endpoint client to interact with the MDE API.
+        Create a new Microsoft Defender for Endpoint client to interact with the MDE API.
 
         params:
             azure_mde_tenant:
@@ -67,10 +66,8 @@ class MDEClient:
             },
         )
 
-        status_code = res.status_code
-        json = res.json()
-
-        if status_code != 200:
+        if not res.ok:
+            status_code = res.status_code
             custom_dimensions = {"status": status_code, "body": res.content}
             logger.error(
                 "Couldn't get Microsoft Defender token from Microsoft authentication flow.",
@@ -78,7 +75,7 @@ class MDEClient:
             )
             return ""
 
-        token = json.get("access_token")
+        token = res.json().get("access_token")
 
         if not token:
             custom_dimensions = {"status": status_code, "body": res.content}
@@ -100,7 +97,7 @@ class MDEClient:
 
         params:
             odata_filter:
-                str: An OData fitler to filter the devices.
+                str: An OData filter to filter the devices.
 
         returns:
             list["MDEDevice"]: The machines from Microsoft Defender for Endpoint.
@@ -119,16 +116,16 @@ class MDEClient:
                 headers={"Authorization": "Bearer {}".format(self.api_token)},
             )
 
-            status_code = res.status_code
-            json = res.json()
-
-            if status_code != 200:
+            if not res.ok:
+                status_code = res.status_code
                 custom_dimensions = {"status": status_code, "body": res.content}
                 logger.error(
                     "Failed to fetch devices from Microsoft Defender for Endpoint.",
                     extra={"custom_dimensions": custom_dimensions},
                 )
                 break
+
+            json = res.json()
 
             # Get the new devices from the request.
             new_devices = json.get("value")
@@ -138,7 +135,7 @@ class MDEClient:
                 )
             )
 
-            # Turn the JSON paylaods from MDE into MDEDevice objects.
+            # Turn the JSON payloads from MDE into MDEDevice objects.
             for payload in new_devices:
                 try:
                     devices.append(MDEDevice.from_json(payload))
@@ -166,11 +163,11 @@ class MDEClient:
         self, device: "MDEDevice", tag: str, action: str, retry=True
     ) -> bool:
         """
-        Alters a tag for a given device using Mirosoft Defender for Endpoint.
+        Alters a tag for a given device using Microsoft Defender for Endpoint.
 
         params:
             device:
-                "MDEDevice": The device to alter the tag from.
+                MDEDevice: The device to alter the tag from.
             tag:
                 str: The tag to alter.
             action:
@@ -184,18 +181,17 @@ class MDEClient:
 
         res = requests.post(
             "https://api.securitycenter.microsoft.com/api/machines/{}/tags".format(
-                self.device_id
+                device.uuid
             ),
-            headers={"Authorization": "Bearer {}".format(self.token)},
+            headers={"Authorization": "Bearer {}".format(self.api_token)},
             json={
                 "Value": tag,
                 "Action": action,
             },
         )
 
-        status_code = res.status_code
-
-        if status_code != 200:
+        if not res.ok:
+            status_code = res.status_code
             custom_dimensions = {
                 "status": status_code,
                 "body": res.content,
@@ -203,9 +199,7 @@ class MDEClient:
 
             if status_code == 429 and retry:
                 logger.info(
-                    """
-                    Could\'t perform action "{}" with tag "{}" on device {}. Retrying after 10 seconds.
-                    """.format(
+                    'Could\'t perform action "{}" with tag "{}" on device {}. Retrying after 10 seconds.'.format(
                         action,
                         tag,
                         device,
@@ -214,31 +208,165 @@ class MDEClient:
                 )
                 time.sleep(10)
                 self.alter_device_tag(tag, action, retry=False)
-                return
+            else:
+                logger.error(
+                    'Could\'t perform action "{}" with tag "{}" on device {}.'.format(
+                        action,
+                        tag,
+                        device,
+                    ),
+                    extra={"custom_dimensions": custom_dimensions},
+                )
 
-            logger.error(
-                """
-                Could\'t perform action "{}" with tag "{}" on device {}.'
-                """.format(
-                    action,
-                    tag,
-                    device,
-                ),
-                extra={"custom_dimensions": custom_dimensions},
-            )
             return False
 
         logger.info(
-            """
-            Performed action "{}" with tag "{}" on device {}.
-            """.format(
-                action,
-                tag,
-                device,
+            'Performed action "{}" with tag "{}" on device {}.'.format(
+                action, tag, device
             )
         )
 
         return True
+
+    def get_vulnerabilities(self) -> list["MDEVulnerability"]:
+        """
+        Get the vulnerabilities of the machine.
+
+        returns:
+            list['MDEVulnerability']: The vulnerabilities of the machine.
+        """
+
+        kudos_query: str = """
+        DeviceTvmSoftwareVulnerabilities
+        | where VulnerabilitySeverityLevel == 'Critical'
+        | join kind=inner (
+            DeviceTvmSoftwareVulnerabilitiesKB
+            | where PublishedDate <= datetime_add('day', -25, now())
+            | project CveId
+        ) on CveId
+        | join kind=inner (
+            DeviceInfo
+            | where IsExcluded == false and isnotempty(OSPlatform)
+            | summarize arg_max(Timestamp, *) by DeviceId
+            | project-away Timestamp
+            | extend MachineInfo = pack(
+                'DeviceId', DeviceId,
+                'DeviceName', DeviceName,
+                'OS', OSPlatform,
+                'Tags', parse_json(DeviceManualTags),
+                'Users', parse_json(LoggedOnUsers)
+            )
+        ) on DeviceId
+        | summarize Machines = make_set(MachineInfo) by CveId, SoftwareName, SoftwareVendor
+        """
+        cve_url: str = (
+            "https://api.securitycenter.microsoft.com/api/advancedqueries/run"
+        )
+
+        vulnerabilities: list["MDEVulnerability"] = []
+
+        while cve_url:
+            res = requests.post(
+                cve_url,
+                headers={"Authorization": "Bearer {}".format(self.api_token)},
+                json={"Query": kudos_query},
+            )
+
+            if not res.ok:
+                status_code = res.status_code
+                custom_dimensions = {"status": status_code, "body": res.content}
+                logger.error(
+                    "Failed to fetch vulnerabilities from Microsoft Defender for Endpoint.",
+                    extra={"custom_dimensions": custom_dimensions},
+                )
+                break
+
+            json = res.json()
+
+            new_vulnerabilities = json.get("Results")
+            logger.info(
+                "Fetched {} new vulnerabilities from Microsoft Defender for Endpoint.".format(
+                    len(new_vulnerabilities)
+                )
+            )
+
+            for payload in new_vulnerabilities:
+                try:
+                    vulnerabilities.append(MDEVulnerability.from_json(payload))
+                except ValueError:
+                    logger.error(
+                        "Couldn't create a new MDEVuln from the payload {}.".format(
+                            payload
+                        )
+                    )
+
+            # The Microsoft Defender API has a limit of 8k rows per request.
+            # In case this URL exists, this means that more rows can be fetched.
+            # This URL given here can be used to fetch the next devices.
+            cve_url = json.get("@odata.nextLink")
+
+        logger.info(
+            "Fetched a total of {} devices from Microsoft Defender for Endpoint.".format(
+                len(vulnerabilities),
+            )
+        )
+
+        return vulnerabilities
+
+    def get_device_recommendations(
+        self,
+        device: "MDEDevice",
+        odata_filter="remediationType eq 'Update'",
+    ) -> list[str]:
+        recommendations = []
+
+        recommendation_url: str = "https://api-eu.securitycenter.microsoft.com/api/machines/{}/recommendations?$filter={}".format(
+            device.uuid, odata_filter
+        )
+
+        while recommendation_url:
+            res = requests.get(
+                recommendation_url,
+                headers={"Authorization": "Bearer {}".format(self.api_token)},
+            )
+
+            if not res.ok:
+                custom_dimensions = {
+                    "status": res.status_code,
+                    "body": res.content,
+                    "device": device,
+                }
+                logger.error(
+                    "Failed to fetch recommendations for device {} from Microsoft Defender for Endpoint.".format(
+                        device
+                    ),
+                    extra={"custom_dimensions": custom_dimensions},
+                )
+                break
+
+            json = res.json()
+
+            new_recommendations = json.get("value")
+            logger.info(
+                "Fetched {} new recommendations from Microsoft Defender for Endpoint.".format(
+                    len(new_recommendations)
+                )
+            )
+
+            for recommendation in new_recommendations:
+                name = recommendation.get("recommendationName")
+                if name:
+                    recommendations.append(name)
+
+            recommendation_url = json.get("@odata.nextLink")
+
+        logger.info(
+            "Fetched a total of {} recommendation for device {} from Microsoft Defender for Endpoint.".format(
+                len(recommendations), device
+            )
+        )
+
+        return recommendations
 
 
 class MDEDevice:
@@ -251,15 +379,19 @@ class MDEDevice:
 
     uuid: str
     name: None | str
-    tags: list[str]
     health: None | str
+    os: None | str
+    users: list[str]
+    tags: list[str]
 
     def __init__(
         self,
         uuid: str,
         name: None | str = None,
-        tags: list[str] = [],
         health: None | str = None,
+        os: None | str = None,
+        users: list[str] = [],
+        tags: list[str] = [],
     ) -> "MDEDevice":
         """
         Create a new Microsoft Defender for Endpoint device.
@@ -270,21 +402,46 @@ class MDEDevice:
             name=None:
                 str: The name of the Microsoft Defender for Endpoint device.
                 None: No name is provided.
-            tags=[]:
-                list[str]: The tags of the Microsoft Defender for Endpoint device.
             health=None:
                 str: The health of the Microsoft Defender for Endpoint device.
                 None: No health status is provided.
+            users=[]:
+                users[str]: A list of users that used the machine.
+            tags=[]:
+                list[str]: The tags of the Microsoft Defender for Endpoint device.
 
         returns:
             MDEDevice: The Microsoft Defender for Endpoint device.
         """
         self.uuid = uuid
         self.name = name
-        self.tags = tags
         self.health = health
+        self.os = os
+        self.users = users
+        self.tags = tags
 
-    def from_json(json: str) -> "MDEDevice":
+    def __str__(self) -> str:
+        """
+        The device represented as a string.
+        """
+        if self.name:
+            return '"{}" (UUID="{}")'.format(self.name, self.uuid)
+        else:
+            return '"UUID={}"'.format(self.uuid)
+
+    def __eq__(self, other: "MDEDevice") -> bool:
+        """
+        Two devices are equal if they have the same UUID.
+
+        params:
+            other: The device to compare against.
+        """
+        return self.uuid == other.uuid
+
+    def __ne__(self, other: "MDEDevice") -> bool:
+        return not self.__eq__(self, other)
+
+    def from_json(json: dict) -> "MDEDevice":
         """
         Create a MDEDevice from a JSON payload.
         """
@@ -293,70 +450,153 @@ class MDEDevice:
             name=json.get("computerDnsName"),
             tags=json.get("machineTags"),
             health=json.get("health"),
+            os=json.get("osPlatform"),
         )
 
-    def get_vulnrabilities(self, kind="high") -> list["MDEVuln"]:
+    def should_skip(self, automations: list[str], cve: None | str = None) -> bool:
         """
-        Get the vulnerabilities of the machine.
+        Returns True if this device should be skipped.
+
+        Automation names:
+            DDC2: The Data Defender task 2 (Cleanup FixIt tags).
+            DDC3: The Data Defender task 3 (Cleanup ZZZ tags).
+            CVE: The CVE automation that create tickets for vulnerable devices.
+            CVE-SPECIFIC: Checks if it should skip specific CVE's.
 
         params:
-            kind="high":
-                str: The kind of vulnerabilities to fetch. Either "high" or "critical".
+            automation_names=[]:
+                list[str]: The name of the automation to skip. The names can be found above.
 
         returns:
-            list['MDEVuln']: The vulnerabilities of the machine.
+            bool: True if the device should be skipped.
         """
 
-        if kind == "high":
-            lookback_time_filter = (
-                (datetime.now() - timedelta(days=24))
-                .replace(hour=0, minute=0, second=0, microsecond=0)
-                .isoformat()
-            )
-            cve_url_filter = (
-                "$filter=(publishedOn lt {}) and (severity eq 'High')".format(
-                    lookback_time_filter,
-                )
-            )
-        elif kind == "critical":
-            cve_url_filter = "$filter=severity eq 'Critical'"
-        else:
-            raise ValueError("The kind parameter must be either 'high' or 'critical'.")
+        patterns: list[re.Pattern] = []
 
-        cve_url = "https://api.securitycenter.microsoft.com/api/machines/{}/vulnerabilities?{}".format(
-            self.device_id,
-            cve_url_filter,
-        )
+        for automation in automations:
+            match automation:
+                case "DDC2":
+                    patterns.append((0, re.compile(r"^SKIP-DDC2$")))
+                case "DDC3":
+                    patterns.append((1, re.compile(r"^SKIP-DDC3$")))
+                case "CVE":
+                    patterns.append((2, re.compile(r"^SKIP-CVE$")))
+                case "CVE-SPECIFIC":
+                    patterns.append(
+                        (3, re.compile(r"^SKIP-CVE-\[(?P<CVE>\*|CVE-\d{4}-\d{4,7})\]$"))
+                    )
+                case _:
+                    logger.warn(
+                        'The automation "{}" is not recognized and can therefore not be skipped.'.format(
+                            automation
+                        )
+                    )
 
-        while cve_url:
-            res = requests.get(
-                cve_url, headers={"Authorization": "Bearer {}".format(self.token)}
-            )
+        for tag in self.tags:
+            for i, pattern in patterns:
+                if m := re.match(pattern, tag):
+                    match i:
+                        # Special logic for pattern 3
+                        case 3:
+                            groups = m.groupdict()
+                            cve_from_tag = groups.get("CVE")
+                            if cve_from_tag != cve and cve_from_tag != "*":
+                                continue
 
-            json = res.json()
+                    return True
 
-            cve_url = json.get("@odata.nextLink")
-
-    def __str__(self):
-        if self.uuid:
-            return '"UUID={}"'.format(self.uuid)
-        else:
-            return '"{}" (UUID="{}")'.format(self.name, self.uuid)
+        return False
 
 
-class MDEVuln:
+class MDEVulnerability:
     """
     A class that represents a Microsoft Defender for Endpoint vulnerability.
     """
 
     uuid: str
+    devices: list["MDEDevice"]
+    cveId: None | str
+    description: None | str
+    softwareName: None | str
+    softwareVendor: None | str
 
-    def __init__(self, uuid: str) -> "MDEVuln":
+    def __init__(
+        self,
+        uuid: str,
+        devices: list["MDEDevice"] = [],
+        cveId: None | str = None,
+        description: None | str = None,
+        softwareName: None | str = None,
+        softwareVendor: None | str = None,
+    ) -> "MDEVulnerability":
         """
         Create a new Microsoft Defender for Endpoint vulnerability.
 
         params:
-            uuid:
+            cveId=None:
                 str: The UUID of the Microsoft Defender for Endpoint vulnerability.
+                None: Not CVE ID is provided.
+            description=None:
+                None: No description provided.
+                str: The vulnerability description.
+            devices=[]:
+                list[MDEDevice]: The devices that are affected by the vulnerability.
+            softwareName=None:
+                str: The name of the software vulnerable.
+                None: No software name provided.
+            softwareVendor=None:
+                str: The vendor of the software vulnerable.
+                None: No software vendor provided.
+
+
+        returns:
+            MDEVulnerability: The Microsoft Defender Vulnerability.
         """
-        self.uuid = uuid
+        self.cveId = cveId
+        self.description = description
+        self.devices = devices
+        self.softwareName = softwareName
+        self.softwareVendor = softwareVendor
+
+    def __str__(self):
+        """
+        The vulnerability represented as a string.
+        """
+        if len(self.devices) > 5:
+            return '"{}" (TotalDevices: {})'.format(self.cveId, len(self.devices))
+        else:
+            return '"{}"'.format(self.cveId)
+
+    def __eq__(self, other: "MDEVulnerability"):
+        return self.cveId == other.cveId
+
+    def __ne__(self, other: "MDEVulnerability"):
+        return not self.__eq__(other)
+
+    def from_json(json: dict) -> "MDEDevice":
+        """
+        Create a MDEVuln from a JSON payload.
+        """
+        devices: list["MDEDevice"] = []
+
+        machines = json.get("Machines")
+
+        for payload in machines:
+            devices.append(
+                MDEDevice(
+                    payload.get("DeviceId"),
+                    name=payload.get("DeviceName") or "Unknown",
+                    os=payload.get("OS") or "Unknown",
+                    users=payload.get("LoggedOnUsers") or [],
+                    tags=payload.get("Tags") or [],
+                )
+            )
+
+        return MDEVulnerability(
+            json.get("id"),
+            cveId=json.get("CveId"),
+            devices=devices,
+            description=json.get("VulnerabilityDescription"),
+            softwareName=json.get("SoftwareName"),
+            softwareVendor=json.get("SoftwareVendor"),
+        )

@@ -13,29 +13,27 @@ from azure.keyvault.secrets import SecretClient
 
 from lib.logging import logger
 from lib.mde import MDEClient, MDEDevice
-from lib.fixit import FixItClient
 
 
 bp = func.Blueprint()
 
 
 @bp.timer_trigger(
-    schedule="0 0 8 * * 1-5",
+    schedule="0 0 8,14 * * 1-5",
     arg_name="myTimer",
     run_on_startup=False,
     use_monitor=False,
 )
-def ddc_automation(myTimer: func.TimerRequest) -> None:
+def ddc3_automation(myTimer: func.TimerRequest) -> None:
     """
-    This is the main Azure Function that takes care of the Data Defender Cleanup tasks.
+    This is the main Azure Function that takes care of the Data Defender Cleanup task 3.
     For detailed description of what this does refer to the README.md.
 
     Actions:
-        - Removes closed FixIt tags from devices.
         - Adds "ZZZ" tag to duplicate devices.
     """
 
-    logger.info("Started the Data Defender Cleanup tasks.")
+    logger.info("Started the Data Defender Cleanup task 3.")
 
     credential = DefaultAzureCredential()
 
@@ -62,16 +60,16 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
     MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
     MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
 
+<<<<<<< HEAD:src/ddc.py
     # FixIt secrets
     FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
     FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
     FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
     FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
 
+=======
+>>>>>>> development:src/ddc3.py
     mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
-    fixit_client: FixItClient = FixItClient(
-        FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
-    )
 
     devices = mde_client.get_devices()
     devices_sorted_by_name: dict(str, MDEDevice) = {}
@@ -80,36 +78,15 @@ def ddc_automation(myTimer: func.TimerRequest) -> None:
         logger.info("Task won't continue as there is no devices to process.")
         return
 
-    logger.info(
-        "Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal."
-    )
-
-    removed_fixit_tags = 0
-
     for device in devices:
+        if device.should_skip(automations=["DDC3"]):
+            continue
+
         # This is later used to determine if the devices are duplicates.
         if devices_sorted_by_name.get(device.name) is None:
             devices_sorted_by_name[device.name] = [device]
         else:
             devices_sorted_by_name[device.name].append(device)
-
-        for tag in device.tags:
-            request_id = FixItClient.extract_id(tag)
-
-            if not request_id:
-                continue
-
-            request_status = fixit_client.get_fixit_request_status(request_id)
-
-            if request_status == "completed":
-                if mde_client.alter_device_tag(device, tag, "Remove"):
-                    removed_fixit_tags += 1
-
-    logger.info(
-        "Finished removing {} Fix-It tags from devices in the Microsoft Defender portal.".format(
-            removed_fixit_tags
-        )
-    )
 
     # Remove devices that only appear once (by name) in the table.
     for device_name, devices in list(devices_sorted_by_name.items()):
