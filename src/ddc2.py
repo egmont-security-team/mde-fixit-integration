@@ -1,7 +1,7 @@
 """
 This module contains the Azure function that takes care of the
-Data Defender cleanup tasks. This means it cleans up duplicate
-devices and removes FixIt tags that has the relative request completed.
+Data Defender cleanup task 2. This means it removes FixIt tags
+from devices where the relative request is completed.
 """
 
 import os
@@ -33,6 +33,8 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
         - Removes closed FixIt tags from devices.
     """
 
+    # SETUP - start
+
     logger.info("Started the Data Defender Cleanup task 2.")
 
     credential = DefaultAzureCredential()
@@ -51,7 +53,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
         return
 
     secret_client = SecretClient(
-        vault_url="https://{}.vault.azure.net".format(key_vault_name),
+        vault_url=f"https://{key_vault_name}.vault.azure.net",
         credential=credential,
     )
 
@@ -70,6 +72,8 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
         FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
     )
 
+    # SETUP - end
+
     devices = mde_client.get_devices()
 
     if not devices:
@@ -83,7 +87,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
     removed_fixit_tags = 0
 
     for device in devices:
-        if device.should_skip(automation_names=["DDC2"]):
+        if device.should_skip("DDC2"):
             continue
 
         for tag in device.tags:
@@ -98,8 +102,4 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
                 if mde_client.alter_device_tag(device, tag, "Remove"):
                     removed_fixit_tags += 1
 
-    logger.info(
-        "Finished removing {} Fix-It tags from devices in the Microsoft Defender portal.".format(
-            removed_fixit_tags
-        )
-    )
+    logger.info(f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal.")

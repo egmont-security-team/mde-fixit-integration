@@ -33,6 +33,8 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
         - Adds "ZZZ" tag to duplicate devices.
     """
 
+    # SETUP - start
+
     logger.info("Started the Data Defender Cleanup task 3.")
 
     credential = DefaultAzureCredential()
@@ -51,7 +53,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
         return
 
     secret_client = SecretClient(
-        vault_url="https://{}.vault.azure.net".format(key_vault_name),
+        vault_url=f"https://{key_vault_name}.vault.azure.net",
         credential=credential,
     )
 
@@ -60,38 +62,20 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
     MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
 
-<<<<<<< HEAD:src/ddc.py
-    # FixIt secrets
-    FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
-    FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
-    FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
-    FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
-
-=======
->>>>>>> development:src/ddc3.py
     mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
 
+    # SETUP - end
+
     devices = mde_client.get_devices()
-    devices_sorted_by_name: dict(str, MDEDevice) = {}
 
     if not devices:
         logger.info("Task won't continue as there is no devices to process.")
         return
 
-    for device in devices:
-        if device.should_skip(automations=["DDC3"]):
-            continue
-
-        # This is later used to determine if the devices are duplicates.
-        if devices_sorted_by_name.get(device.name) is None:
-            devices_sorted_by_name[device.name] = [device]
-        else:
-            devices_sorted_by_name[device.name].append(device)
+    device_dict: dict[str, MDEDevice] = create_device_dict(devices)
 
     # Remove devices that only appear once (by name) in the table.
-    for device_name, devices in list(devices_sorted_by_name.items()):
-        if len(devices) == 1:
-            del devices_sorted_by_name[device_name]
+    remove_non_duplicates(device_dict)
 
     logger.info(
         'Start adding "ZZZ" tag to duplicate devices in the Microsoft Defender portal.'
@@ -99,7 +83,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     duplicate_devices_tagged = 0
 
-    for device_name, devices in devices_sorted_by_name.items():
+    for device_name, devices in device_dict.items():
         for index, device in enumerate(devices):
             # If it already have the ZZZ or it isn't inactive, skip it
             if (
@@ -112,9 +96,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
                 duplicate_devices_tagged += 1
 
     logger.info(
-        "Finished tagging {} duplicate devices in the Microsoft Defender portal.".format(
-            duplicate_devices_tagged
-        )
+        f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defender portal."
     )
 
 
@@ -122,11 +104,53 @@ def is_zzz_tag(tag: str) -> bool:
     """
     This returns wether this is a "ZZZ" tag or not.
 
-    returns:
-        bool: True if the tag is a "ZZZ" tag.
-
     params:
         tag:
             str: The string that represents the tag.
+
+    returns:
+        bool: True if the tag is a "ZZZ" tag.
     """
+
     return re.match(r"(?i)^z{3}$", tag)
+
+
+def create_device_dict(devices: list[MDEDevice]) -> dict[str, MDEDevice]:
+    """
+    Creates a dictionary from the given list of devices where each key
+    in the dictonary, is the name of the device.
+
+    params:
+        devices:
+            lilst[MDEDevice]: The list of MDE devices.
+
+    returns:
+        dict[str, MDEDevice]: The dictonary containing all the MDE devices.
+    """
+    device_dict: dict[str, MDEDevice] = {}
+
+    for device in devices:
+        if device.should_skip("DDC3"):
+            continue
+
+        # This is later used to determine if the devices are duplicates.
+        if device_dict.get(device.name) is None:
+            device_dict[device.name] = [device]
+        else:
+            device_dict[device.name].append(device)
+        
+    return device_dict
+
+
+def remove_non_duplicates(device_dict: dict[str, MDEDevice]):
+    """
+    Removes non duplicate devices from a device dictionary. This make sure
+    that only devices that appear once (by name) is removed from the list.
+
+    params:
+        device_dict:
+            dict[str, MDEDevice]: The dictionary containing the devices.
+    """
+    for device_name, devices in list(device_dict.items()):
+        if len(devices) == 1:
+            del device_dict[device_name]

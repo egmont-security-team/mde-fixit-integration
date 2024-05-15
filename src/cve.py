@@ -1,7 +1,7 @@
 """
 This module contains the Azure function that takes care of
-the CVE related stuff. This means creating FixIt tickets for devices
-hit by certain CVE's.
+the CVE related stuff. This means it is creating FixIt tickets
+for devices hit by certain CVE.
 """
 
 import os
@@ -21,15 +21,22 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=False,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
     """
-    TODO: This function is WIP.
+    This function automatically creates a FixIt tickets for vulnerable devices.
+    For detailed description of what this does refer to the README.md.
+
+    actions:
+        - Create FixIt tickets for vulnerable devices.
+        - Tags machine after creating FxiIt ticket.
     """
 
-    logger.info("Started the CVE Automation tasks.")
+    # SETUP - start
+
+    logger.info("Started the CVE Automation task.")
 
     credential = DefaultAzureCredential()
 
@@ -47,7 +54,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         return
 
     secret_client = SecretClient(
-        vault_url="https://{}.vault.azure.net".format(key_vault_name),
+        vault_url=f"https://{key_vault_name}.vault.azure.net",
         credential=credential,
     )
 
@@ -66,74 +73,97 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
     )
 
-    vulnerabilities: list[MDEVulnerability] = mde_client.get_vulnerabilities()
+    # SETUP - end
 
+    devices: list[MDEDevice] = mde_client.get_devices()
+    if not devices:
+        logger.info("Task won't continue as there is no devices to process.")
+        return
+
+    vulnerabilities: list[MDEVulnerability] = mde_client.get_vulnerabilities()
     if not vulnerabilities:
         logger.info("Task won't continue as there is no vulnerabilities to process.")
         return
 
+    multi_vulnerable_devices, single_vulnerable_devices = get_vulnerable_devices(vulnerabilities)
+
     multi_fixit_tickets: int = 0
     single_fixit_tickets: int = 0
 
-    vulnerable_devices: dict[MDEDevice] = {}
+    for device_uuid, vulnerability in single_vulnerable_devices.items():
+        device = next((device for device in devices if device.uuid == device_uuid), None)
 
-    for vulnerability in vulnerabilities:
-        # TODO: Make device threshold setting in Azure portal. (20 is current threshold)
-        if len(vulnerability.devices) > 20:
-            logger.info("Creating multi FixIt-ticket for {}.".format(vulnerability))
-            multi_fixit_tickets += 1
+        if not device:
+            logger.error(f"No device found with UUID={device_uuid}.")
             continue
 
-        for device in vulnerability.devices:
-            if not device.should_skip(
-                automations=["CVE-SPECIFIC"],
-                cve=vulnerability.cveId
-            ) and not vulnerable_devices.get(device.uuid):
-                vulnerable_devices[device.uuid] = {
-                    "device": device,
-                    "vulnerability": vulnerability,
-                }
-
-    for uuid, info in vulnerable_devices.items():
-        device = info.get("device")
-        vulnerability = info.get("vulnerability")
-
-        if not device.should_skip(
-            automations=["CVE-SPECIFIC"],
-            cve=vulnerability.cveId
-        ) and not vulnerable_devices.get(device.uuid):
+        if device.should_skip("CVE", cve=vulnerability.cveId):
             continue
 
         if any(FixItClient.extract_id(tag) for tag in device.tags):
-            logger.info(
-                "Skipping {} because it has a fixit request tag.".format(device)
-            )
+            logger.info(f"Skipping {device} because it has a fixit request tag.")
             continue
 
         recommendations = mde_client.get_device_recommendations(device)
         if len(recommendations) < 1:
-            logger.warning(
-                "Skipping {} because is has no security recommendations.".format(device)
-            )
+            logger.warning(f"{device} has no security recommendations.")
             continue
 
-        logger.info("Creating single ticket for {}.".format(device))
+        logger.info(f"Creating single ticket for {device}.")
         fixit_id = fixit_client.create_single_device_fixit_requests(
             device, vulnerability, recommendations
         )
 
         if fixit_id:
-            if not mde_client.alter_device_tag(device, "#{}".format(fixit_id), "Add"):
-                logger.error(
-                    'Created FixIt ticket "#{}" but failed to give {} a tag.'.format(
-                        fixit_id, device
-                    )
-                )
             single_fixit_tickets += 1
 
+            if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
+                logger.error(
+                    f'Created FixIt ticket "#{fixit_id}" but failed to give {device} a tag.'
+                )
+
     total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
+
     logger.info(
-        "Created a total of {} FixIt-tickets (multi={}, single={}, looked_at_devices={})".format(
-            total_fixit_tickets, multi_fixit_tickets, single_fixit_tickets, len(list(vulnerable_devices.keys()))
-        )
+        f"Created a total of {total_fixit_tickets} FixIt-tickets (multi={multi_fixit_tickets}, single={single_fixit_tickets})"
     )
+
+
+def get_vulnerable_devices(
+    vulnerabilities: list[MDEVulnerability],
+) -> (dict[str, list[str]], dict[str, MDEVulnerability]):
+    """
+    Returns a tuble containing all the vulnerable devices.
+
+    The first element is multi vulnerabilities. This is vulnerabilities that have
+    a lot of devices that are vulnerable, therefore they should be handled as a grouop.
+    The value here is the UUID of the vulnerability and the value is the UUID list of
+    vulnerable devices.
+
+    The second element is single vulnerabilities. They all have few vulnerabel devices,
+    therefor they should be handled individually. The key here is the device UUID and the
+    value is the vulnerability
+
+    params:
+        vulnerabilities:
+            list[MDEVulnerability]: The list of vulnerabilities to process.
+
+
+    returns:
+        (dick[str, list[str]], dict[str, [MDEVulnerability]]): The dictionary containing
+            the signle and multi device vulnerabilities.
+    """
+    multi_vulnerable_devices: dict[str, list[str]] = {}
+    single_vulnerable_devices: dict[str, MDEVulnerability] = {}
+
+    for vulnerability in vulnerabilities:
+        # TODO: Make device threshold setting in Azure portal. (20 is current threshold)
+        if len(vulnerability.devices) > 20:
+            multi_vulnerable_devices[vulnerability.uuid] = vulnerability.devices
+            continue
+
+        for device_uuid in vulnerability.devices:
+            if not single_vulnerable_devices.get(device_uuid):
+                single_vulnerable_devices[device_uuid] = vulnerability
+
+    return (multi_vulnerable_devices, single_vulnerable_devices)

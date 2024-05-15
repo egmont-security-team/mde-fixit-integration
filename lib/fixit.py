@@ -29,12 +29,12 @@ class FixItClient:
         Create a new FixIt client to interact with the FixIt API.
 
         params:
-            api_key:
-                str: The API key to use for the FixIt client.
             base_url:
                 str: The base URL of the FixIt 4me REST API.
             fixit_4me_account:
                 str: The FixIt 4me account to use.
+            api_key:
+                str: The API key to use for the FixIt client.
 
         returns:
             FixItClient: The FixIt client.
@@ -78,10 +78,10 @@ class FixItClient:
         """
 
         res = requests.get(
-            "{}/requests/{}".format(self.base_url, request_id),
+            f"{self.base_url}/requests/{request_id}",
             headers={
                 "X-4me-Account": self.fixit_4me_account,
-                "Authorization": "Bearer {}".format(self.api_key),
+                "Authorization": f"Bearer {self.api_key}",
             },
         )
 
@@ -96,16 +96,12 @@ class FixItClient:
 
             if status_code == 404:
                 logger.error(
-                    'The request "{}" was not found in the FixIt 4me account.'.format(
-                        request_id
-                    ),
+                    f'The request "{request_id}" was not found in the FixIt 4me account.',
                     extra={"custom_dimensions": custom_dimensions},
                 )
             else:
                 logger.error(
-                    'Could not get the request "{}" from the FixIt 4me REST API.'.format(
-                        request_id
-                    ),
+                    f'Could not get the request "{request_id}" from the FixIt 4me REST API.',
                     extra={"custom_dimensions": custom_dimensions},
                 )
 
@@ -134,14 +130,20 @@ class FixItClient:
         """
 
         payload = {
-            "subject": "Security[{}]: Vulnerable Device".format(vulnerability.cveId),
+            "subject": f"Security[{vulnerability.cveId}]: Vulnerable Device",
             # The template ID from FixIt.
             "template_id": "186253",
             # Custom template fields.
             "custom_fields": [
                 {"id": "cve", "value": vulnerability.cveId or vulnerability.uuid},
-                {"id": "software_name", "value": vulnerability.softwareName or "Unknown"},
-                {"id": "software_vendor", "value": vulnerability.softwareVendor or "Unknown"},
+                {
+                    "id": "software_name",
+                    "value": vulnerability.softwareName or "Unknown",
+                },
+                {
+                    "id": "software_vendor",
+                    "value": vulnerability.softwareVendor or "Unknown",
+                },
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
                 {"id": "device_os", "value": device.os},
@@ -153,10 +155,10 @@ class FixItClient:
             ],
         }
         res = requests.post(
-            "{}/requests".format(self.base_url),
+            f"{self.base_url}/requests",
             headers={
                 "X-4me-Account": self.fixit_4me_account,
-                "Authorization": "Bearer {}".format(self.api_key),
+                "Authorization": f"Bearer {self.api_key}",
             },
             json=payload,
         )

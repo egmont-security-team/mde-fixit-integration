@@ -55,9 +55,7 @@ class MDEClient:
         """
 
         res = requests.post(
-            "https://login.microsoftonline.com/{}/oauth2/v2.0/token".format(
-                self.azure_mde_tenant
-            ),
+            f"https://login.microsoftonline.com/{self.azure_mde_tenant}/oauth2/v2.0/token",
             data={
                 "grant_type": "client_credentials",
                 "client_id": self.azure_mde_client_id,
@@ -103,17 +101,13 @@ class MDEClient:
             list["MDEDevice"]: The machines from Microsoft Defender for Endpoint.
         """
 
-        devices_url = (
-            "https://api.securitycenter.microsoft.com/api/machines?$filter={}".format(
-                odata_filter
-            )
-        )
+        devices_url = f"https://api.securitycenter.microsoft.com/api/machines?$filter={odata_filter}"
         devices: list["MDEDevice"] = []
 
         while devices_url:
             res = requests.get(
                 devices_url,
-                headers={"Authorization": "Bearer {}".format(self.api_token)},
+                headers={"Authorization": f"Bearer {self.api_token}"},
             )
 
             if not res.ok:
@@ -130,20 +124,24 @@ class MDEClient:
             # Get the new devices from the request.
             new_devices = json.get("value")
             logger.info(
-                "Fetched {} new devices from Microsoft Defender for Endpoint.".format(
-                    len(new_devices)
-                )
+                f"Fetched {len(new_devices)} new devices from Microsoft Defender for Endpoint."
             )
 
             # Turn the JSON payloads from MDE into MDEDevice objects.
             for payload in new_devices:
                 try:
-                    devices.append(MDEDevice.from_json(payload))
+                    devices.append(
+                        MDEDevice(
+                            payload.get("id"),
+                            name=payload.get("computerDnsName"),
+                            tags=payload.get("machineTags"),
+                            health=payload.get("health"),
+                            os=payload.get("osPlatform"),
+                        )
+                    )
                 except ValueError:
                     logger.error(
-                        "Couldn't create a new MDEDevice from the payload {}.".format(
-                            payload
-                        )
+                        f"Couldn't create a new MDEDevice from the payload {payload}."
                     )
 
             # The Microsoft Defender API has a limit of 10k devices per request.
@@ -152,9 +150,7 @@ class MDEClient:
             devices_url = json.get("@odata.nextLink")
 
         logger.info(
-            "Fetched a total of {} devices from Microsoft Defender for Endpoint.".format(
-                len(devices),
-            )
+            f"Fetched a total of {len(devices)} devices from Microsoft Defender for Endpoint."
         )
 
         return devices
@@ -180,10 +176,8 @@ class MDEClient:
         """
 
         res = requests.post(
-            "https://api.securitycenter.microsoft.com/api/machines/{}/tags".format(
-                device.uuid
-            ),
-            headers={"Authorization": "Bearer {}".format(self.api_token)},
+            f"https://api.securitycenter.microsoft.com/api/machines/{device.uuid}/tags",
+            headers={"Authorization": f"Bearer {self.api_token}"},
             json={
                 "Value": tag,
                 "Action": action,
@@ -199,32 +193,20 @@ class MDEClient:
 
             if status_code == 429 and retry:
                 logger.info(
-                    'Could\'t perform action "{}" with tag "{}" on device {}. Retrying after 10 seconds.'.format(
-                        action,
-                        tag,
-                        device,
-                    ),
+                    f'Could\'t perform action "{action}" with tag "{tag}" on device {device}. Retrying after 10 seconds.',
                     extra={"custom_dimensions": custom_dimensions},
                 )
                 time.sleep(10)
                 self.alter_device_tag(tag, action, retry=False)
             else:
                 logger.error(
-                    'Could\'t perform action "{}" with tag "{}" on device {}.'.format(
-                        action,
-                        tag,
-                        device,
-                    ),
+                    f'Could\'t perform action "{action}" with tag "{tag}" on device {device}.',
                     extra={"custom_dimensions": custom_dimensions},
                 )
 
             return False
 
-        logger.info(
-            'Performed action "{}" with tag "{}" on device {}.'.format(
-                action, tag, device
-            )
-        )
+        logger.info(f'Performed action "{action}" with tag "{tag}" on device {device}.')
 
         return True
 
@@ -248,16 +230,9 @@ class MDEClient:
             DeviceInfo
             | where IsExcluded == false and isnotempty(OSPlatform) and SensorHealthState == "Active"
             | summarize arg_max(Timestamp, *) by DeviceId
-            | project-away Timestamp
-            | extend MachineInfo = pack(
-                'DeviceId', DeviceId,
-                'DeviceName', DeviceName,
-                'OS', OSPlatform,
-                'Tags', parse_json(DeviceManualTags),
-                'Users', parse_json(LoggedOnUsers)
-            )
+            | project DeviceId
         ) on DeviceId
-        | summarize Machines = make_set(MachineInfo) by CveId, SoftwareName, SoftwareVendor
+        | summarize Devices = make_set(DeviceId) by CveId, SoftwareName, SoftwareVendor
         """
         cve_url: str = (
             "https://api.securitycenter.microsoft.com/api/advancedqueries/run"
@@ -268,7 +243,7 @@ class MDEClient:
         while cve_url:
             res = requests.post(
                 cve_url,
-                headers={"Authorization": "Bearer {}".format(self.api_token)},
+                headers={"Authorization": f"Bearer {self.api_token}"},
                 json={"Query": kudos_query},
             )
 
@@ -285,19 +260,24 @@ class MDEClient:
 
             new_vulnerabilities = json.get("Results")
             logger.info(
-                "Fetched {} new vulnerabilities from Microsoft Defender for Endpoint.".format(
-                    len(new_vulnerabilities)
-                )
+                f"Fetched {len(new_vulnerabilities)} new vulnerabilities from Microsoft Defender for Endpoint."
             )
 
             for payload in new_vulnerabilities:
                 try:
-                    vulnerabilities.append(MDEVulnerability.from_json(payload))
+                    vulnerabilities.append(
+                        MDEVulnerability(
+                            payload.get("id"),
+                            cveId=payload.get("CveId"),
+                            devices=payload.get("Devices"),
+                            description=payload.get("VulnerabilityDescription"),
+                            softwareName=payload.get("SoftwareName"),
+                            softwareVendor=payload.get("SoftwareVendor"),
+                        )
+                    )
                 except ValueError:
                     logger.error(
-                        "Couldn't create a new MDEVuln from the payload {}.".format(
-                            payload
-                        )
+                        f"Couldn't create a new MDEVuln from the payload {payload}."
                     )
 
             # The Microsoft Defender API has a limit of 8k rows per request.
@@ -306,9 +286,7 @@ class MDEClient:
             cve_url = json.get("@odata.nextLink")
 
         logger.info(
-            "Fetched a total of {} devices from Microsoft Defender for Endpoint.".format(
-                len(vulnerabilities),
-            )
+            f"Fetched a total of {len(vulnerabilities)} devices from Microsoft Defender for Endpoint."
         )
 
         return vulnerabilities
@@ -320,14 +298,11 @@ class MDEClient:
     ) -> list[str]:
         recommendations = []
 
-        recommendation_url: str = "https://api-eu.securitycenter.microsoft.com/api/machines/{}/recommendations?$filter={}".format(
-            device.uuid, odata_filter
-        )
-
+        recommendation_url: str = f"https://api-eu.securitycenter.microsoft.com/api/machines/{device.uuid}/recommendations?$filter={odata_filter}"
         while recommendation_url:
             res = requests.get(
                 recommendation_url,
-                headers={"Authorization": "Bearer {}".format(self.api_token)},
+                headers={"Authorization": f"Bearer {self.api_token}"},
             )
 
             if not res.ok:
@@ -337,9 +312,7 @@ class MDEClient:
                     "device": device,
                 }
                 logger.error(
-                    "Failed to fetch recommendations for device {} from Microsoft Defender for Endpoint.".format(
-                        device
-                    ),
+                    f"Failed to fetch recommendations for device {device} from Microsoft Defender for Endpoint.",
                     extra={"custom_dimensions": custom_dimensions},
                 )
                 break
@@ -348,9 +321,7 @@ class MDEClient:
 
             new_recommendations = json.get("value")
             logger.info(
-                "Fetched {} new recommendations from Microsoft Defender for Endpoint.".format(
-                    len(new_recommendations)
-                )
+                f"Fetched {len(new_recommendations)} new recommendations from Microsoft Defender for Endpoint."
             )
 
             for recommendation in new_recommendations:
@@ -361,9 +332,7 @@ class MDEClient:
             recommendation_url = json.get("@odata.nextLink")
 
         logger.info(
-            "Fetched a total of {} recommendation for device {} from Microsoft Defender for Endpoint.".format(
-                len(recommendations), device
-            )
+            f"Fetched a total of {len(recommendations)} recommendation for device {device} from Microsoft Defender for Endpoint."
         )
 
         return recommendations
@@ -425,9 +394,9 @@ class MDEDevice:
         The device represented as a string.
         """
         if self.name:
-            return '"{}" (UUID="{}")'.format(self.name, self.uuid)
+            return f'"{self.name}" (UUID="{self.uuid}")'
         else:
-            return '"UUID={}"'.format(self.uuid)
+            return f'"UUID={self.uuid}"'
 
     def __eq__(self, other: "MDEDevice") -> bool:
         """
@@ -441,27 +410,14 @@ class MDEDevice:
     def __ne__(self, other: "MDEDevice") -> bool:
         return not self.__eq__(self, other)
 
-    def from_json(json: dict) -> "MDEDevice":
+    def should_skip(self, automation: str, cve: None | str = None) -> bool:
         """
-        Create a MDEDevice from a JSON payload.
-        """
-        return MDEDevice(
-            json.get("id"),
-            name=json.get("computerDnsName"),
-            tags=json.get("machineTags"),
-            health=json.get("health"),
-            os=json.get("osPlatform"),
-        )
-
-    def should_skip(self, automations: list[str], cve: None | str = None) -> bool:
-        """
-        Returns True if this device should be skipped.
+        Returns True if this device should be skipped for a given automation.
 
         Automation names:
             DDC2: The Data Defender task 2 (Cleanup FixIt tags).
             DDC3: The Data Defender task 3 (Cleanup ZZZ tags).
             CVE: The CVE automation that create tickets for vulnerable devices.
-            CVE-SPECIFIC: Checks if it should skip specific CVE's.
 
         params:
             automation_names=[]:
@@ -471,39 +427,34 @@ class MDEDevice:
             bool: True if the device should be skipped.
         """
 
-        patterns: list[re.Pattern] = []
+        pattern: re.Pattern
 
-        for automation in automations:
-            match automation:
-                case "DDC2":
-                    patterns.append((0, re.compile(r"^SKIP-DDC2$")))
-                case "DDC3":
-                    patterns.append((1, re.compile(r"^SKIP-DDC3$")))
-                case "CVE":
-                    patterns.append((2, re.compile(r"^SKIP-CVE$")))
-                case "CVE-SPECIFIC":
-                    patterns.append(
-                        (3, re.compile(r"^SKIP-CVE-\[(?P<CVE>\*|CVE-\d{4}-\d{4,7})\]$"))
-                    )
-                case _:
-                    logger.warn(
-                        'The automation "{}" is not recognized and can therefore not be skipped.'.format(
-                            automation
-                        )
-                    )
+        match automation:
+            case "DDC2":
+                pattern = re.compile(r"^SKIP-DDC2$")
+            case "DDC3":
+                pattern = re.compile(r"^SKIP-DDC3$")
+            case "CVE":
+                pattern = re.compile(r"^SKIP-CVE(?:-\[(?P<CVE>CVE-\d{4}-\d{4,7})\])?$")
+            case _:
+                logger.warn(
+                    f'The autmation "{automation}" is not recognized. Can\'t peform a valid "should_skip()" check.'
+                )
+
+        if self.tags is None:
+            # No tags, can't skip
+            return False
 
         for tag in self.tags:
-            for i, pattern in patterns:
-                if m := re.match(pattern, tag):
-                    match i:
-                        # Special logic for pattern 3
-                        case 3:
-                            groups = m.groupdict()
-                            cve_from_tag = groups.get("CVE")
-                            if cve_from_tag != cve and cve_from_tag != "*":
-                                continue
+            if m := re.match(pattern, tag):
+                # Special logic for CVE automation
+                if automation == "CVE":
+                    groups = m.groupdict()
+                    cve_from_tag = groups.get("CVE")
+                    if cve_from_tag and cve_from_tag != cve:
+                        continue
 
-                    return True
+                return True
 
         return False
 
@@ -514,7 +465,7 @@ class MDEVulnerability:
     """
 
     uuid: str
-    devices: list["MDEDevice"]
+    devices: list[str]
     cveId: None | str
     description: None | str
     softwareName: None | str
@@ -533,21 +484,22 @@ class MDEVulnerability:
         Create a new Microsoft Defender for Endpoint vulnerability.
 
         params:
+            uuid:
+                str: The UUID of the vulnerability from defender.
+            devices=[]:
+                list[str]: A list of device UUIDs hit by the vulnerability.
             cveId=None:
                 str: The UUID of the Microsoft Defender for Endpoint vulnerability.
                 None: Not CVE ID is provided.
             description=None:
                 None: No description provided.
                 str: The vulnerability description.
-            devices=[]:
-                list[MDEDevice]: The devices that are affected by the vulnerability.
             softwareName=None:
                 str: The name of the software vulnerable.
                 None: No software name provided.
             softwareVendor=None:
                 str: The vendor of the software vulnerable.
                 None: No software vendor provided.
-
 
         returns:
             MDEVulnerability: The Microsoft Defender Vulnerability.
@@ -559,44 +511,13 @@ class MDEVulnerability:
         self.softwareVendor = softwareVendor
 
     def __str__(self):
-        """
-        The vulnerability represented as a string.
-        """
         if len(self.devices) > 5:
-            return '"{}" (TotalDevices: {})'.format(self.cveId, len(self.devices))
+            return f'"{self.cveId}" (TotalDevices: {len(self.devices)})'
         else:
-            return '"{}"'.format(self.cveId)
+            return f'"{self.cveId}"'
 
     def __eq__(self, other: "MDEVulnerability"):
         return self.cveId == other.cveId
 
     def __ne__(self, other: "MDEVulnerability"):
         return not self.__eq__(other)
-
-    def from_json(json: dict) -> "MDEDevice":
-        """
-        Create a MDEVuln from a JSON payload.
-        """
-        devices: list["MDEDevice"] = []
-
-        machines = json.get("Machines")
-
-        for payload in machines:
-            devices.append(
-                MDEDevice(
-                    payload.get("DeviceId"),
-                    name=payload.get("DeviceName") or "Unknown",
-                    os=payload.get("OS") or "Unknown",
-                    users=payload.get("LoggedOnUsers") or [],
-                    tags=payload.get("Tags") or [],
-                )
-            )
-
-        return MDEVulnerability(
-            json.get("id"),
-            cveId=json.get("CveId"),
-            devices=devices,
-            description=json.get("VulnerabilityDescription"),
-            softwareName=json.get("SoftwareName"),
-            softwareVendor=json.get("SoftwareVendor"),
-        )
