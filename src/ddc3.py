@@ -22,7 +22,7 @@ bp = func.Blueprint()
     schedule="0 0 8,14 * * 1-5",
     arg_name="myTimer",
     run_on_startup=False,
-    use_monitor=False,
+    use_monitor=True,
 )
 def ddc3_automation(myTimer: func.TimerRequest) -> None:
     """
