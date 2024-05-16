@@ -118,14 +118,14 @@ def is_zzz_tag(tag: str) -> bool:
 def create_device_dict(devices: list[MDEDevice]) -> dict[str, MDEDevice]:
     """
     Creates a dictionary from the given list of devices where each key
-    in the dictonary, is the name of the device.
+    in the dictionary, is the name of the device.
 
     params:
         devices:
-            lilst[MDEDevice]: The list of MDE devices.
+            list[MDEDevice]: The list of MDE devices.
 
     returns:
-        dict[str, MDEDevice]: The dictonary containing all the MDE devices.
+        dict[str, MDEDevice]: The dictionary containing all the MDE devices.
     """
     device_dict: dict[str, MDEDevice] = {}
 

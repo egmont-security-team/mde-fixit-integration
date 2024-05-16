@@ -101,7 +101,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             continue
 
         if any(FixItClient.extract_id(tag) for tag in device.tags):
-            logger.info(f"Skipping {device} because it has a fixit request tag.")
+            logger.info(f"Skipping {device} because it has a FixIt request tag.")
             continue
 
         recommendations = mde_client.get_device_recommendations(device)
@@ -133,14 +133,14 @@ def get_vulnerable_devices(
     vulnerabilities: list[MDEVulnerability],
 ) -> (dict[str, list[str]], dict[str, MDEVulnerability]):
     """
-    Returns a tuble containing all the vulnerable devices.
+    Returns a tuple containing all the vulnerable devices.
 
     The first element is multi vulnerabilities. This is vulnerabilities that have
-    a lot of devices that are vulnerable, therefore they should be handled as a grouop.
+    a lot of devices that are vulnerable, therefore they should be handled as a group.
     The value here is the UUID of the vulnerability and the value is the UUID list of
     vulnerable devices.
 
-    The second element is single vulnerabilities. They all have few vulnerabel devices,
+    The second element is single vulnerabilities. They all have few vulnerable devices,
     therefor they should be handled individually. The key here is the device UUID and the
     value is the vulnerability
 
@@ -148,10 +148,9 @@ def get_vulnerable_devices(
         vulnerabilities:
             list[MDEVulnerability]: The list of vulnerabilities to process.
 
-
     returns:
         (dick[str, list[str]], dict[str, [MDEVulnerability]]): The dictionary containing
-            the signle and multi device vulnerabilities.
+            the single and multi device vulnerabilities.
     """
     multi_vulnerable_devices: dict[str, list[str]] = {}
     single_vulnerable_devices: dict[str, MDEVulnerability] = {}
