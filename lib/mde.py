@@ -224,7 +224,7 @@ class MDEClient:
         | join kind=inner (
             DeviceTvmSoftwareVulnerabilitiesKB
             | where PublishedDate <= datetime_add('day', -25, now())
-            | project CveId
+            | project CveId, VulnerabilityDescription
         ) on CveId
         | join kind=inner (
             DeviceInfo
@@ -232,7 +232,7 @@ class MDEClient:
             | summarize arg_max(Timestamp, *) by DeviceId
             | project DeviceId
         ) on DeviceId
-        | summarize Devices = make_set(DeviceId) by CveId, SoftwareName, SoftwareVendor
+        | summarize Devices = make_set(DeviceId) by CveId, SoftwareName, SoftwareVendor, VulnerabilityDescription
         """
         cve_url: str = (
             "https://api.securitycenter.microsoft.com/api/advancedqueries/run"
@@ -268,8 +268,8 @@ class MDEClient:
                     vulnerabilities.append(
                         MDEVulnerability(
                             payload.get("id"),
-                            cveId=payload.get("CveId"),
                             devices=payload.get("Devices"),
+                            cveId=payload.get("CveId"),
                             description=payload.get("VulnerabilityDescription"),
                             softwareName=payload.get("SoftwareName"),
                             softwareVendor=payload.get("SoftwareVendor"),
@@ -438,7 +438,7 @@ class MDEDevice:
                 pattern = re.compile(r"^SKIP-CVE(?:-\[(?P<CVE>CVE-\d{4}-\d{4,7})\])?$")
             case _:
                 logger.warn(
-                    f'The autmation "{automation}" is not recognized. Can\'t peform a valid "should_skip()" check.'
+                    f'The automation "{automation}" is not recognized. Can\'t peform a valid "should_skip()" check.'
                 )
 
         if self.tags is None:
@@ -490,7 +490,7 @@ class MDEVulnerability:
                 list[str]: A list of device UUIDs hit by the vulnerability.
             cveId=None:
                 str: The UUID of the Microsoft Defender for Endpoint vulnerability.
-                None: Not CVE ID is provided.
+                None: No CVE ID is provided.
             description=None:
                 None: No description provided.
                 str: The vulnerability description.
@@ -504,6 +504,7 @@ class MDEVulnerability:
         returns:
             MDEVulnerability: The Microsoft Defender Vulnerability.
         """
+        self.uuid = uuid
         self.cveId = cveId
         self.description = description
         self.devices = devices

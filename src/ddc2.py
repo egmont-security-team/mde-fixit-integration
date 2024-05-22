@@ -21,7 +21,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 6 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=True,
 )
 def ddc2_automation(myTimer: func.TimerRequest) -> None:
@@ -96,7 +96,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
             if not request_id:
                 continue
 
-            request_status = fixit_client.get_fixit_request_status(request_id)
+            request_status = fixit_client.get_request_status(request_id)
 
             if request_status == "completed":
                 if mde_client.alter_device_tag(device, tag, "Remove"):
