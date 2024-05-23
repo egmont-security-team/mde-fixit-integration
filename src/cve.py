@@ -182,8 +182,6 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         logger.info(f"Creating multi ticket for {device}.")
 
-        devices_string = "\n".join(str(dev) for dev in vulnerable_devices)
-
         custom_fields = [
             {"id": "cve", "value": vulnerability.cveId or vulnerability.uuid},
             {
@@ -198,7 +196,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 "id": "software_vendor",
                 "value": vulnerability.softwareVendor or "Unknown",
             },
-            {"id": "device_list", "value": devices_string},
+            {"id": "device_count", "value": f"{str(len(vulnerable_devices))} devices hit"},
         ]
         fixit_res = fixit_client.create_request(
             f"Security[{vulnerability.cveId}]: Multi Vulnerable Device",
