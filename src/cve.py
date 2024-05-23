@@ -21,7 +21,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -196,7 +196,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 "id": "software_vendor",
                 "value": vulnerability.softwareVendor or "Unknown",
             },
-            {"id": "device_count", "value": f"{str(len(vulnerable_devices))} devices hit"},
+            {"id": "device_count", "value": f"{str(len(vulnerable_devices))} affected"},
         ]
         fixit_res = fixit_client.create_request(
             f"Security[{vulnerability.cveId}]: Multi Vulnerable Device",
