@@ -382,12 +382,7 @@ class MDEClient:
 
             json = res.json()
 
-            new_recommendations = json.get("value")
-            logger.info(
-                f"Fetched {len(new_recommendations)} new recommendations from Microsoft Defender for Endpoint."
-            )
-
-            for recommendation in new_recommendations:
+            for recommendation in json.get("value"):
                 name = recommendation.get("recommendationName")
                 if name:
                     recommendations.append(name)
@@ -581,7 +576,7 @@ class MDEVulnerability:
         return f'"{self.cve_id}"'
 
     def __eq__(self, other: "MDEVulnerability"):
-        return self.cve_id == other.cve_id
+        return self.uuid == other.uuid
 
     def __ne__(self, other: "MDEVulnerability"):
         return not self.__eq__(other)

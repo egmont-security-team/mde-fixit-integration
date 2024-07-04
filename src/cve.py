@@ -22,7 +22,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -114,7 +114,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         recommendations = mde_client.get_device_recommendations(device)
         if len(recommendations) < 1:
-            logger.warning(f"{device} has no security recommendations.")
+            logger.warning(f"The device {device} has no security recommendations.")
             continue
 
         logger.info(f"Creating single ticket for {device}.")
