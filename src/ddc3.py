@@ -1,7 +1,7 @@
 """
 This module contains the Azure function that takes care of the
 Data Defender cleanup task 3. This means it cleans up duplicate
-devices and removes FixIt tags that has the relative request completed.
+devices by giving them a "ZZZ" tag.
 """
 
 import os
