@@ -13,6 +13,7 @@ from azure.keyvault.secrets import SecretClient
 from lib.logging import logger
 from lib.mde import MDEClient
 from lib.fixit import FixItClient
+from lib.utils import get_secret
 
 
 bp = func.Blueprint()
@@ -58,14 +59,14 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
     )
 
     # MDE secrets
-    MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
-    MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
-    MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
+    MDE_TENANT = get_secret(secret_client, "Azure-MDE-Tenant")
+    MDE_CLIENT_ID = get_secret(secret_client, "Azure-MDE-Client-ID")
+    MDE_SECRET_VALUE = get_secret(secret_client, "Azure-MDE-Secret-Value")
 
     # FixIt secrets
-    FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
-    FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
-    FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
+    FIXIT_4ME_ACCOUNT = get_secret(secret_client, "FixIt-4Me-Account")
+    FIXIT_4ME_BASE_URL = get_secret(secret_client, "FixIt-4Me-Base-URL")
+    FIXIT_4ME_API_KEY = get_secret(secret_client, "FixIt-4Me-API-Key")
 
     mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
     fixit_client: FixItClient = FixItClient(
@@ -90,6 +91,10 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
         if device.should_skip("DDC2"):
             continue
 
+        if device.tags is None:
+            logger.warning(f"Skipping device {device} since it has no tags.")
+            continue
+
         for tag in device.tags:
             request_id = FixItClient.extract_id(tag)
 
@@ -102,4 +107,6 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
                 if mde_client.alter_device_tag(device, tag, "Remove"):
                     removed_fixit_tags += 1
 
-    logger.info(f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal.")
+    logger.info(
+        f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal."
+    )

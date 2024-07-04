@@ -13,6 +13,7 @@ from azure.keyvault.secrets import SecretClient
 from lib.logging import logger
 from lib.mde import MDEClient, MDEDevice, MDEVulnerability
 from lib.fixit import FixItClient
+from lib.utils import get_secret
 
 
 bp = func.Blueprint()
@@ -59,26 +60,19 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     )
 
     # MDE secrets
-    MDE_TENANT = secret_client.get_secret("Azure-MDE-Tenant").value
-    MDE_CLIENT_ID = secret_client.get_secret("Azure-MDE-Client-ID").value
-    MDE_SECRET_VALUE = secret_client.get_secret("Azure-MDE-Secret-Value").value
+    MDE_TENANT = get_secret(secret_client, "Azure-MDE-Tenant")
+    MDE_CLIENT_ID = get_secret(secret_client, "Azure-MDE-Client-ID")
+    MDE_SECRET_VALUE = get_secret(secret_client, "Azure-MDE-Secret-Value")
 
     # FixIt secrets
-    FIXIT_4ME_BASE_URL = secret_client.get_secret("FixIt-4Me-Base-URL").value
-    FIXIT_4ME_ACCOUNT = secret_client.get_secret("FixIt-4Me-Account").value
-    FIXIT_4ME_API_KEY = secret_client.get_secret("FixIt-4Me-API-Key").value
+    FIXIT_4ME_BASE_URL = get_secret(secret_client, "FixIt-4Me-Base-URL")
+    FIXIT_4ME_ACCOUNT = get_secret(secret_client, "FixIt-4Me-Account")
+    FIXIT_4ME_API_KEY = get_secret(secret_client, "FixIt-4Me-API-Key")
+    FIXIT_SINGLE_TEMPLATE_ID = get_secret(secret_client, "CVE-Single-FixIt-Template-ID")
+    FIXIT_MULTI_TEMPLATE_ID = get_secret(secret_client, "CVE-Multi-FixIt-Template-ID")
 
-    FIXIT_SINGLE_TEMPLATE_ID = secret_client.get_secret(
-        "CVE-Single-FixIt-Template-ID"
-    ).value
-    FIXIT_MULTI_TEMPLATE_ID = secret_client.get_secret(
-        "CVE-Multi-FixIt-Template-ID"
-    ).value
-
-    mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
-    fixit_client: FixItClient = FixItClient(
-        FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
-    )
+    mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
+    fixit_client = FixItClient(FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY)
 
     # SETUP - end
 
@@ -103,10 +97,15 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         device = next((dev for dev in devices if dev.uuid == device_uuid), None)
 
         if not device:
-            logger.error(f"No device found with UUID=\"{device_uuid}\" for single ticket.")
+            logger.error(
+                f'No device found with UUID="{device_uuid}" for single ticket.'
+            )
             continue
 
-        if device.should_skip("CVE", cve=vulnerability.cveId):
+        if device.should_skip("CVE", cve=vulnerability.cve_id):
+            continue
+        if device.tags is None:
+            logger.warning(f"Skipping {device} since it has no tags.")
             continue
 
         if any(FixItClient.extract_id(tag) for tag in device.tags):
@@ -121,18 +120,18 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         logger.info(f"Creating single ticket for {device}.")
 
         custom_fields = [
-            {"id": "cve", "value": vulnerability.cveId or vulnerability.uuid},
+            {"id": "cve", "value": vulnerability.cve_id or vulnerability.uuid},
             {
                 "id": "cve_description",
                 "value": vulnerability.description or "Unknown",
             },
             {
                 "id": "software_name",
-                "value": vulnerability.softwareName or "Unknown",
+                "value": vulnerability.software_name or "Unknown",
             },
             {
                 "id": "software_vendor",
-                "value": vulnerability.softwareVendor or "Unknown",
+                "value": vulnerability.software_vendor or "Unknown",
             },
             {"id": "device_name", "value": device.name},
             {"id": "device_uuid", "value": device.uuid},
@@ -144,7 +143,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             },
         ]
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cveId}]: Single Vulnerable Device",
+            f"Security[{vulnerability.cve_id}]: Single Vulnerable Device",
             FIXIT_SINGLE_TEMPLATE_ID,
             custom_fields=custom_fields,
         )
@@ -158,17 +157,29 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                     f'Created single FixIt ticket "#{fixit_id}" but failed to give {device} a tag.'
                 )
 
-    for cve_id, device_uuids in multi_vulnerable_devices.items():
+    for cve_id, vulnerability in multi_vulnerable_devices.items():
         vulnerable_devices = []
 
-        for device_uuid in device_uuids:
+        if not vulnerability.devices:
+            logger.warning(
+                f"Skipping vulnerability {vulnerability} since it has no affected devices."
+            )
+            continue
+
+        for device_uuid in vulnerability.devices:
             device = next((dev for dev in devices if dev.uuid == device_uuid), None)
 
             if not device:
-                logger.error(f"No device found with UUID=\"{device_uuid}\" for multi ticket.")
+                logger.error(
+                    f'No device found with UUID="{device_uuid}" for multi ticket.'
+                )
                 continue
 
             if device.should_skip("CVE", cve=cve_id):
+                continue
+
+            if device.tags is None:
+                logger.warning(f"Skipping {device} since it has no tags.")
                 continue
 
             if any(FixItClient.extract_id(tag) for tag in device.tags):
@@ -183,23 +194,23 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         logger.info(f"Creating multi ticket for {device}.")
 
         custom_fields = [
-            {"id": "cve", "value": vulnerability.cveId or vulnerability.uuid},
+            {"id": "cve", "value": vulnerability.cve_id or vulnerability.uuid},
             {
                 "id": "cve_description",
                 "value": vulnerability.description or "Unknown",
             },
             {
                 "id": "software_name",
-                "value": vulnerability.softwareName or "Unknown",
+                "value": vulnerability.software_name or "Unknown",
             },
             {
                 "id": "software_vendor",
-                "value": vulnerability.softwareVendor or "Unknown",
+                "value": vulnerability.software_vendor or "Unknown",
             },
             {"id": "device_count", "value": f"{str(len(vulnerable_devices))} affected"},
         ]
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cveId}]: Multi Vulnerable Device",
+            f"Security[{vulnerability.cve_id}]: Multi Vulnerable Device",
             FIXIT_MULTI_TEMPLATE_ID,
             custom_fields=custom_fields,
         )
@@ -223,7 +234,10 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
 def get_vulnerable_devices(
     vulnerabilities: list[MDEVulnerability],
-) -> (dict[str, list[str]], dict[str, MDEVulnerability]):
+) -> tuple[
+    dict[str, MDEVulnerability],
+    dict[str, MDEVulnerability],
+]:
     """
     Returns a tuple containing all the vulnerable devices.
 
@@ -244,21 +258,27 @@ def get_vulnerable_devices(
         (dick[str, list[str]], dict[str, [MDEVulnerabilityr]): A tuple containing
             the multi and single device vulnerabilities.
     """
-    multi_vulnerable_devices: dict[str, list[str]] = {}
+    multi_vulnerable_devices: dict[str, MDEVulnerability] = {}
     single_vulnerable_devices: dict[str, MDEVulnerability] = {}
 
     try:
         device_threshold = int(os.environ["CVE_DEVICE_THRESHOLD"])
-    except KeyError:
+    except KeyError as exception:
         logger.error("No device threshold specefied. Can't continue!")
-        return
-    except ValueError:
+        raise exception
+    except ValueError as exception:
         logger.error("The device threshold is not a number. Can't continue!")
-        return
+        raise exception
 
     for vulnerability in vulnerabilities:
+        if vulnerability.devices is None:
+            logger.warning(
+                f"Skipping vulnerability {vulnerability} since it has no affected devices."
+            )
+            continue
+
         if len(vulnerability.devices) >= device_threshold:
-            multi_vulnerable_devices[vulnerability.uuid] = vulnerability.devices
+            multi_vulnerable_devices[vulnerability.uuid] = vulnerability
             continue
 
         for device_uuid in vulnerability.devices:

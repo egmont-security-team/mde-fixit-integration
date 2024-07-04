@@ -2,9 +2,8 @@
 Shared logger used by multiple files.
 """
 
-import os
-
 import logging
+import os
 
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 
@@ -18,7 +17,7 @@ def init_logger() -> logging.Logger:
         Logger: The logger instance.
     """
 
-    logger = logging.getLogger(__name__)
+    current_logger = logging.getLogger(__name__)
 
     try:
         connection_string = os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"]
@@ -26,16 +25,16 @@ def init_logger() -> logging.Logger:
         connection_string = ""
 
     if not connection_string:
-        logger.warning(
+        current_logger.warning(
             'Couldn\'t setup proper Application Insights logging since "APPLICATIONINSIGHTS_CONNECTION_STRING" is not present.'
         )
-        return logger
+        return current_logger
 
-    if not logger.handlers:
+    if not current_logger.handlers:
         azure_handler = AzureLogHandler(connection_string=connection_string)
-        logger.addHandler(azure_handler)
+        current_logger.addHandler(azure_handler)
 
-    return logger
+    return current_logger
 
 
 logger = init_logger()

@@ -3,8 +3,10 @@ All functions and classes related to FixIt 4me.
 """
 
 import re
+from typing import Optional
 
 import requests
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from lib.logging import logger
 
@@ -23,7 +25,7 @@ class FixItClient:
         base_url: str,
         fixit_4me_account: str,
         api_key: str,
-    ) -> "FixItClient":
+    ):
         """
         Create a new FixIt client to interact with the FixIt API.
 
@@ -42,7 +44,8 @@ class FixItClient:
         self.fixit_4me_account = fixit_4me_account
         self.api_key = api_key
 
-    def extract_id(string: str) -> str:
+    @staticmethod
+    def extract_id(string: str) -> Optional[str]:
         """
         Gets the FixIt request ID from a given string (if it's a prober FixIt tag).
         This uses regular expression to determine if the tag is prober.
@@ -59,12 +62,13 @@ class FixItClient:
         # This also takes care of human error by checking for spaces between
         # the "#" and the numbers
         if not re.match(r"^#( )*[0-9]+$", string):
-            return ""
+            return None
 
         # This removes the "#" and optional spaces from the tag.
         return re.sub(r"^#( )*", "", string)
 
-    def get_request_status(self, request_id: str) -> str:
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=4), retry=retry_if_exception_type(requests.HTTPError), reraise=True)
+    def get_request_status(self, request_id: str) -> Optional[str]:
         """
         Gets the status of the FixIt request relative to the request id given.
 
@@ -82,6 +86,7 @@ class FixItClient:
                 "X-4me-Account": self.fixit_4me_account,
                 "Authorization": f"Bearer {self.api_key}",
             },
+            timeout=120,
         )
 
         if not res.ok:
@@ -97,19 +102,27 @@ class FixItClient:
                     f'The request "{request_id}" was not found in the FixIt 4me account.',
                     extra={"custom_dimensions": custom_dimensions},
                 )
+            elif res.status_code == 429:
+                logger.error(
+                    f'Too many requests to the FixIt 4me REST API for the request "{request_id}".',
+                    extra={"custom_dimensions": custom_dimensions},
+                )
+                res.raise_for_status()
             else:
                 logger.error(
                     f'Could not get the request "{request_id}" from the FixIt 4me REST API.',
                     extra={"custom_dimensions": custom_dimensions},
                 )
+            return None
 
-            return ""
+        json = res.json()
 
-        return res.json().get("status")
+        return json.get("status")
 
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=4), retry=retry_if_exception_type(requests.HTTPError), reraise=True)
     def create_request(
-        self, subject: str, template_id: str, custom_fields: list[dict[str, str]] = None
-    ) -> str:
+        self, subject: str, template_id: str, custom_fields: Optional[list[dict[str, str]]] = None
+    ) -> Optional[dict]:
         """
         Create a FixIt request in the FixIt 4me account.
 
@@ -140,6 +153,7 @@ class FixItClient:
                 "Authorization": f"Bearer {self.api_key}",
             },
             json=payload,
+            timeout=120,
         )
 
         if not res.ok:
@@ -156,17 +170,17 @@ class FixItClient:
                     "Couldn't find the FixIt 4me template",
                     extra={"custom_dimensions": custom_dimensions},
                 )
-            elif res.status_code == 401:
+                return None
+            if res.status_code == 401:
                 logger.error(
                     "Unauthorized for creating the FixIt 4me request",
                     extra={"custom_dimensions": custom_dimensions},
                 )
-            else:
-                logger.error(
-                    "Couldn't create the FixIt 4me request.",
-                    extra={"custom_dimensions": custom_dimensions},
-                )
-
-            return ""
+                return None
+            logger.error(
+                "Couldn't create the FixIt 4me request.",
+                extra={"custom_dimensions": custom_dimensions},
+            )
+            res.raise_for_status()
 
         return res.json()

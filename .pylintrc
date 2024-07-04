@@ -1,2 +1,3 @@
 [MESSAGES CONTROL]
-disable = line-too-long, import-error, logging-fstring-interpolation, missing-timeout
+disable = line-too-long, logging-fstring-interpolation, invalid-name, duplicate-code
+    
