@@ -22,7 +22,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -149,7 +149,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         )
 
         if fixit_res is None:
-            logger.error("Did not succesfully create the FixIt ticket. Skipping device.")
+            logger.error(f"Did not succesfully create the FixIt ticket. Skipping vulnerable device {device}.")
             continue
 
         single_fixit_tickets += 1
@@ -218,15 +218,18 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             custom_fields=custom_fields,
         )
 
-        if fixit_res:
-            multi_fixit_tickets += 1
+        if fixit_res is None:
+            logger.error(f"Did not succesfully create the FixIt ticket. Skipping vulnerability {device}.")
+            continue
 
-            fixit_id = fixit_res.get("id")
-            for device in vulnerable_devices:
-                if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
-                    logger.error(
-                        f'Created multi FixIt ticket "#{fixit_id}" but failed to give {device} devices a tag.'
-                    )
+        multi_fixit_tickets += 1
+
+        fixit_id = fixit_res.get("id")
+        for device in vulnerable_devices:
+            if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
+                logger.error(
+                    f'Created multi FixIt ticket "#{fixit_id}" but failed to give {device} devices a tag.'
+                )
 
     total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
 

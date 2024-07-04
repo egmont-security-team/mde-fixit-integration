@@ -576,7 +576,7 @@ class MDEVulnerability:
     def __str__(self):
         if self.devices is None:
             return f'"{self.cve_id}"'
-        elif len(self.devices) > 5:
+        if len(self.devices) > 5:
             return f'"{self.cve_id}" (TotalDevices: {len(self.devices)})'
         return f'"{self.cve_id}"'
 

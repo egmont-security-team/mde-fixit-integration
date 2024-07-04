@@ -6,7 +6,12 @@ import re
 from typing import Optional
 
 import requests
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from lib.logging import logger
 
@@ -67,7 +72,12 @@ class FixItClient:
         # This removes the "#" and optional spaces from the tag.
         return re.sub(r"^#( )*", "", string)
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=4), retry=retry_if_exception_type(requests.HTTPError), reraise=True)
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=4),
+        retry=retry_if_exception_type(requests.HTTPError),
+        reraise=True,
+    )
     def get_request_status(self, request_id: str) -> Optional[str]:
         """
         Gets the status of the FixIt request relative to the request id given.
@@ -119,9 +129,17 @@ class FixItClient:
 
         return json.get("status")
 
-    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=4), retry=retry_if_exception_type(requests.HTTPError), reraise=True)
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=4),
+        retry=retry_if_exception_type(requests.HTTPError),
+        reraise=True,
+    )
     def create_request(
-        self, subject: str, template_id: str, custom_fields: Optional[list[dict[str, str]]] = None
+        self,
+        subject: str,
+        template_id: str,
+        custom_fields: Optional[list[dict[str, str]]] = None,
     ) -> Optional[dict]:
         """
         Create a FixIt request in the FixIt 4me account.
@@ -170,22 +188,23 @@ class FixItClient:
                     "Couldn't find the FixIt 4me template",
                     extra={"custom_dimensions": custom_dimensions},
                 )
-                return None
             if res.status_code == 401:
                 logger.error(
                     "Unauthorized for creating the FixIt 4me request",
                     extra={"custom_dimensions": custom_dimensions},
                 )
-                return None
             if res.status_code == 429:
                 logger.error(
                     "Couldn't create the FixIt 4me request due to too many rqeuests.",
                     extra={"custom_dimensions": custom_dimensions},
                 )
                 res.raise_for_status()
+
             logger.error(
                 f"Couldn't create the FixIt 4me request - Got status code {res.status_code}.",
                 extra={"custom_dimensions": custom_dimensions},
             )
+
+            return None
 
         return res.json()
