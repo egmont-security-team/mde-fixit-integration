@@ -148,14 +148,17 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             custom_fields=custom_fields,
         )
 
-        if fixit_res:
-            single_fixit_tickets += 1
+        if fixit_res is None:
+            logger.error("Did not succesfully create the FixIt ticket. Skipping device.")
+            continue
 
-            fixit_id = fixit_res.get("id")
-            if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
-                logger.error(
-                    f'Created single FixIt ticket "#{fixit_id}" but failed to give {device} a tag.'
-                )
+        single_fixit_tickets += 1
+
+        fixit_id = fixit_res.get("id")
+        if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
+            logger.error(
+                f'Created single FixIt ticket "#{fixit_id}" but failed to give {device} a tag.'
+            )
 
     for cve_id, vulnerability in multi_vulnerable_devices.items():
         vulnerable_devices = []

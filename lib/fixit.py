@@ -177,10 +177,15 @@ class FixItClient:
                     extra={"custom_dimensions": custom_dimensions},
                 )
                 return None
+            if res.status_code == 429:
+                logger.error(
+                    "Couldn't create the FixIt 4me request due to too many rqeuests.",
+                    extra={"custom_dimensions": custom_dimensions},
+                )
+                res.raise_for_status()
             logger.error(
-                "Couldn't create the FixIt 4me request.",
+                f"Couldn't create the FixIt 4me request - Got status code {res.status_code}.",
                 extra={"custom_dimensions": custom_dimensions},
             )
-            res.raise_for_status()
 
         return res.json()
