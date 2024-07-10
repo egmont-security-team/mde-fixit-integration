@@ -5,6 +5,6 @@
 azure-functions
 azure-identity
 azure-keyvault-secrets
-opencensus-ext-azure
+azure-monitor-opentelemetry
 requests
 tenacity

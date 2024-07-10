@@ -4,17 +4,18 @@ the CVE related stuff. This means it is creating FixIt tickets
 for devices hit by certain CVE.
 """
 
+import logging
 import os
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
-from lib.logging import logger
-from lib.mde import MDEClient, MDEDevice, MDEVulnerability
 from lib.fixit import FixItClient
+from lib.mde import MDEClient, MDEDevice, MDEVulnerability
 from lib.utils import get_secret
 
+logger = logging.getLogger(__name__)
 
 bp = func.Blueprint()
 
@@ -39,24 +40,20 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     logger.info("Started the CVE Automation task.")
 
-    credential = DefaultAzureCredential()
-
     try:
         key_vault_name = os.environ["KEY_VAULT_NAME"]
-        if not key_vault_name:
-            raise KeyError
     except KeyError:
         logger.critical(
             """
-            Did not find environment variable \"KEY_VAULT_NAME\". Please set this 
-            in \"local.settings.json\" or in the application settings in Azure.
+            Did not find valid value for environment variable \"KEY_VAULT_NAME\".
+            Please set this in \"local.settings.json\" or in the \"application settings\" in Azure.
             """
         )
         return
 
     secret_client = SecretClient(
         vault_url=f"https://{key_vault_name}.vault.azure.net",
-        credential=credential,
+        credential=DefaultAzureCredential(),
     )
 
     # MDE secrets
@@ -78,12 +75,14 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     devices: list[MDEDevice] = mde_client.get_devices()
     if not devices:
-        logger.info("Task won't continue as there is no devices to process.")
+        logger.critical("Task won't continue as there is no devices to process.")
         return
 
     vulnerabilities: list[MDEVulnerability] = mde_client.get_vulnerabilities()
     if not vulnerabilities:
-        logger.info("Task won't continue as there is no vulnerabilities to process.")
+        logger.critical(
+            "Task won't continue as there is no vulnerabilities to process."
+        )
         return
 
     multi_vulnerable_devices, single_vulnerable_devices = get_vulnerable_devices(
@@ -98,63 +97,60 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         if not device:
             logger.error(
-                f'No device found with UUID="{device_uuid}" for single ticket.'
+                f'No device found with UUID="{device_uuid}" for single ticket. Skipping..'
             )
             continue
-
         if device.should_skip("CVE", cve=vulnerability.cve_id):
             continue
         if device.tags is None:
             logger.warning(f"Skipping {device} since it has no tags.")
             continue
-
         if any(FixItClient.extract_id(tag) for tag in device.tags):
             logger.info(f"Skipping {device} because it has a FixIt request tag.")
             continue
 
         recommendations = mde_client.get_device_recommendations(device)
         if len(recommendations) < 1:
-            logger.warning(f"The device {device} has no security recommendations.")
+            # TODO: Alert security that device has critical vulnerability, but has no security recommendations that is application updates.
+            custom_dimensions = {
+                "device": device.uuid,
+                "cve": vulnerability.cve_id or vulnerability.uuid,
+            }
+            logger.error(
+                f"No security recommendations found for {device}.",
+                extra={"custom_dimensions": custom_dimensions},
+            )
             continue
 
         logger.info(f"Creating single ticket for {device}.")
 
+        vulnerability_id = vulnerability.cve_id or vulnerability.uuid
         custom_fields = [
-            {"id": "cve", "value": vulnerability.cve_id or vulnerability.uuid},
-            {
-                "id": "cve_description",
-                "value": vulnerability.description or "Unknown",
-            },
-            {
-                "id": "software_name",
-                "value": vulnerability.software_name or "Unknown",
-            },
-            {
-                "id": "software_vendor",
-                "value": vulnerability.software_vendor or "Unknown",
-            },
+            {"id": "cve", "value": vulnerability_id},
+            {"id": "cve_description", "value": vulnerability.description or ""},
+            {"id": "software_name", "value": vulnerability.software_name or ""},
+            {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
             {"id": "device_name", "value": device.name},
             {"id": "device_uuid", "value": device.uuid},
             {"id": "device_os", "value": device.os},
             {"id": "device_users", "value": device.users},
-            {
-                "id": "recommended_security_updates",
-                "value": "\n".join(recommendations),
-            },
+            {"id": "recommended_security_updates", "value": "\n".join(recommendations)},
         ]
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cve_id}]: Single Vulnerable Device",
+            f"Security[{vulnerability_id}]: Single Vulnerable Device",
             FIXIT_SINGLE_TEMPLATE_ID,
             custom_fields=custom_fields,
         )
 
         if fixit_res is None:
-            logger.error(f"Did not succesfully create the FixIt ticket. Skipping vulnerable device {device}.")
+            logger.error(
+                f"Did not succesfully create the FixIt ticket for {device}. Skipping.."
+            )
             continue
 
         single_fixit_tickets += 1
 
-        fixit_id = fixit_res.get("id")
+        fixit_id = fixit_res["id"]
         if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
             logger.error(
                 f'Created single FixIt ticket "#{fixit_id}" but failed to give {device} a tag.'
@@ -196,30 +192,24 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         logger.info(f"Creating multi ticket for {device}.")
 
+        vulnerability_id = vulnerability.cve_id or vulnerability.uuid
         custom_fields = [
-            {"id": "cve", "value": vulnerability.cve_id or vulnerability.uuid},
-            {
-                "id": "cve_description",
-                "value": vulnerability.description or "Unknown",
-            },
-            {
-                "id": "software_name",
-                "value": vulnerability.software_name or "Unknown",
-            },
-            {
-                "id": "software_vendor",
-                "value": vulnerability.software_vendor or "Unknown",
-            },
+            {"id": "cve", "value": vulnerability_id},
+            {"id": "cve_description", "value": vulnerability.description or ""},
+            {"id": "software_name", "value": vulnerability.software_name or ""},
+            {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
             {"id": "device_count", "value": f"{str(len(vulnerable_devices))} affected"},
         ]
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cve_id}]: Multi Vulnerable Device",
+            f"Security[{vulnerability_id}]: Multiple Vulnerable Devices",
             FIXIT_MULTI_TEMPLATE_ID,
             custom_fields=custom_fields,
         )
 
         if fixit_res is None:
-            logger.error(f"Did not succesfully create the FixIt ticket. Skipping vulnerability {device}.")
+            logger.error(
+                f"Did not succesfully create the FixIt ticket for multi {vulnerability}. Skipping.."
+            )
             continue
 
         multi_fixit_tickets += 1
@@ -247,12 +237,11 @@ def get_vulnerable_devices(
     """
     Returns a tuple containing all the vulnerable devices.
 
-    The first element is multi vulnerabilities. This is vulnerabilities that have
+    The first element is a list of multi vulnerabilities. This is vulnerabilities that have
     a lot of devices that are vulnerable, therefore they should be handled as a group.
-    The value here is the UUID of the vulnerability and the value is the UUID list of
-    vulnerable devices.
+    The value here is the UUID of the vulnerability and the value is the vulnerability itself.
 
-    The second element is single vulnerabilities. They all have few vulnerable devices,
+    The second element is a list of single vulnerabilities. They all have few vulnerable devices,
     therefor they should be handled individually. The key here is the device UUID and the
     value is the vulnerability
 
@@ -261,8 +250,8 @@ def get_vulnerable_devices(
             list[MDEVulnerability]: The list of vulnerabilities to process.
 
     returns:
-        (dick[str, list[str]], dict[str, [MDEVulnerabilityr]): A tuple containing
-            the multi and single device vulnerabilities.
+        tuple[dict[str, MDEVulnerability], dict[str, MDEVulnerabilityr]]:
+            A tuple containing the multi and single device vulnerabilities.
     """
     multi_vulnerable_devices: dict[str, MDEVulnerability] = {}
     single_vulnerable_devices: dict[str, MDEVulnerability] = {}
@@ -288,6 +277,7 @@ def get_vulnerable_devices(
             continue
 
         for device_uuid in vulnerability.devices:
+            # If there is multiple vulnerabilities for the same device, we only want to create one ticket still.
             if not single_vulnerable_devices.get(device_uuid):
                 single_vulnerable_devices[device_uuid] = vulnerability
 

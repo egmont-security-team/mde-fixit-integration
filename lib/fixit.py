@@ -2,18 +2,20 @@
 All functions and classes related to FixIt 4me.
 """
 
+import logging
 import re
 from typing import Optional
 
 import requests
 from tenacity import (
+    before_sleep_log,
     retry,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
 
-from lib.logging import logger
+logger = logging.getLogger(__name__)
 
 
 class FixItClient:
@@ -57,7 +59,7 @@ class FixItClient:
 
         params:
             string:
-                str: The string to get the FixIt request ID from.
+                str: The string to extract the FixIt request ID from.
 
         returns:
             str: The FixIt request ID from the tag.
@@ -76,6 +78,8 @@ class FixItClient:
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=4),
         retry=retry_if_exception_type(requests.HTTPError),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        retry_error_callback=lambda _: None,
         reraise=True,
     )
     def get_request_status(self, request_id: str) -> Optional[str]:
@@ -84,10 +88,11 @@ class FixItClient:
 
         params:
             request_id:
-                str: The request id of the request to check.
+                str: The request id of the request to check (e.g #9999999).
 
         returns:
             str: The status of the request.
+            None: None if the request couldn't be retrived.
         """
 
         res = requests.get(
@@ -99,40 +104,39 @@ class FixItClient:
             timeout=120,
         )
 
-        if not res.ok:
-            custom_dimensions = {
-                "base_url": self.base_url,
-                "X-4me-Account": self.fixit_4me_account,
-                "status": res.status_code,
-                "body": res.content,
-            }
+        custom_dimensions = {
+            "base_url": self.base_url,
+            "X-4me-Account": self.fixit_4me_account,
+            "status": res.status_code,
+            "body": res.content,
+        }
 
-            if res.status_code == 404:
+        match res.status_code:
+            case 401:
+                logger.error(
+                    "Unauthorized for fetching the FixIt 4me request status",
+                    extra={"custom_dimensions": custom_dimensions},
+                )
+                return None
+            case 404:
                 logger.error(
                     f'The request "{request_id}" was not found in the FixIt 4me account.',
                     extra={"custom_dimensions": custom_dimensions},
                 )
-            elif res.status_code == 429:
-                logger.error(
-                    f'Too many requests to the FixIt 4me REST API for the request "{request_id}".',
-                    extra={"custom_dimensions": custom_dimensions},
-                )
+                return None
+            case _:
                 res.raise_for_status()
-            else:
-                logger.error(
-                    f'Could not get the request "{request_id}" from the FixIt 4me REST API.',
-                    extra={"custom_dimensions": custom_dimensions},
-                )
-            return None
 
         json = res.json()
 
-        return json.get("status")
+        return json["status"]
 
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=4),
         retry=retry_if_exception_type(requests.HTTPError),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        retry_error_callback=lambda _: None,
         reraise=True,
     )
     def create_request(
@@ -156,7 +160,6 @@ class FixItClient:
         returns:
             str: The JSON response of the created request.
         """
-
         payload = {
             "subject": subject,
             # The template ID from FixIt.
@@ -164,6 +167,7 @@ class FixItClient:
             # Custom template fields.
             "custom_fields": custom_fields,
         }
+
         res = requests.post(
             f"{self.base_url}/requests",
             headers={
@@ -171,40 +175,31 @@ class FixItClient:
                 "Authorization": f"Bearer {self.api_key}",
             },
             json=payload,
-            timeout=120,
+            timeout=300,
         )
 
-        if not res.ok:
-            custom_dimensions = {
-                "base_url": self.base_url,
-                "X-4me-Account": self.fixit_4me_account,
-                "status": res.status_code,
-                "payload": str(payload),
-                "body": res.content,
-            }
+        custom_dimensions = {
+            "base_url": self.base_url,
+            "X-4me-Account": self.fixit_4me_account,
+            "status": res.status_code,
+            "payload": str(payload),
+            "body": res.content,
+        }
 
-            if res.status_code == 404:
-                logger.error(
-                    "Couldn't find the FixIt 4me template",
-                    extra={"custom_dimensions": custom_dimensions},
-                )
-            if res.status_code == 401:
+        match res.status_code:
+            case 401:
                 logger.error(
                     "Unauthorized for creating the FixIt 4me request",
                     extra={"custom_dimensions": custom_dimensions},
                 )
-            if res.status_code == 429:
+                return None
+            case 404:
                 logger.error(
-                    "Couldn't create the FixIt 4me request due to too many rqeuests.",
+                    "Couldn't find the FixIt 4me template",
                     extra={"custom_dimensions": custom_dimensions},
                 )
+                return None
+            case _:
                 res.raise_for_status()
-
-            logger.error(
-                f"Couldn't create the FixIt 4me request - Got status code {res.status_code}.",
-                extra={"custom_dimensions": custom_dimensions},
-            )
-
-            return None
 
         return res.json()

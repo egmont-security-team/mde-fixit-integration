@@ -4,6 +4,7 @@ Data Defender cleanup task 3. This means it cleans up duplicate
 devices by giving them a "ZZZ" tag.
 """
 
+import logging
 import os
 import re
 
@@ -11,11 +12,12 @@ import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
-from lib.logging import logger
 from lib.mde import MDEClient, MDEDevice
 from lib.utils import get_secret
 
 DeviceDict = dict[str, list[MDEDevice]]
+
+logger = logging.getLogger(__name__)
 
 
 bp = func.Blueprint()
@@ -41,8 +43,6 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     logger.info("Started the Data Defender Cleanup task 3.")
 
-    credential: DefaultAzureCredential = DefaultAzureCredential()
-
     try:
         key_vault_name: str = os.environ["KEY_VAULT_NAME"]
     except KeyError:
@@ -56,32 +56,31 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     secret_client = SecretClient(
         vault_url=f"https://{key_vault_name}.vault.azure.net",
-        credential=credential,
+        credential=DefaultAzureCredential(),
     )
 
     # Microsoft Defender for Endpoint secrets
-    MDE_TENANT: str = get_secret(secret_client, "Azure-MDE-Tenant")
-    MDE_CLIENT_ID: str = get_secret(secret_client, "Azure-MDE-Client-ID")
-    MDE_SECRET_VALUE: str = get_secret(secret_client, "Azure-MDE-Secret-Value")
+    MDE_TENANT = get_secret(secret_client, "Azure-MDE-Tenant")
+    MDE_CLIENT_ID = get_secret(secret_client, "Azure-MDE-Client-ID")
+    MDE_SECRET_VALUE = get_secret(secret_client, "Azure-MDE-Secret-Value")
 
     mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
 
     # SETUP - end
 
     devices = mde_client.get_devices()
-
     if not devices:
         logger.info("Task won't continue as there is no devices to process.")
         return
+
+    logger.info(
+        'Start adding "ZZZ" tag to duplicate devices in the Microsoft Defender portal.'
+    )
 
     device_dict: DeviceDict = create_device_dict(devices)
 
     # Remove devices that only appear once (by name) in the table.
     remove_non_duplicates(device_dict)
-
-    logger.info(
-        'Start adding "ZZZ" tag to duplicate devices in the Microsoft Defender portal.'
-    )
 
     duplicate_devices_tagged = 0
 

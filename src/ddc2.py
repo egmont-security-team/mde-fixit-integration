@@ -10,11 +10,10 @@ import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
+from lib.fixit import FixItClient
 from lib.logging import logger
 from lib.mde import MDEClient
-from lib.fixit import FixItClient
 from lib.utils import get_secret
-
 
 bp = func.Blueprint()
 
@@ -38,12 +37,8 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
 
     logger.info("Started the Data Defender Cleanup task 2.")
 
-    credential = DefaultAzureCredential()
-
     try:
         key_vault_name = os.environ["KEY_VAULT_NAME"]
-        if not key_vault_name:
-            raise KeyError
     except KeyError:
         logger.critical(
             """
@@ -55,7 +50,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
 
     secret_client = SecretClient(
         vault_url=f"https://{key_vault_name}.vault.azure.net",
-        credential=credential,
+        credential=DefaultAzureCredential(),
     )
 
     # MDE secrets
@@ -68,15 +63,12 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
     FIXIT_4ME_BASE_URL = get_secret(secret_client, "FixIt-4Me-Base-URL")
     FIXIT_4ME_API_KEY = get_secret(secret_client, "FixIt-4Me-API-Key")
 
-    mde_client: MDEClient = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
-    fixit_client: FixItClient = FixItClient(
-        FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY
-    )
+    mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
+    fixit_client = FixItClient(FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY)
 
     # SETUP - end
 
     devices = mde_client.get_devices()
-
     if not devices:
         logger.info("Task won't continue as there is no devices to process.")
         return
