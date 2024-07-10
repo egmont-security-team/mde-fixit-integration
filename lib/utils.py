@@ -2,9 +2,10 @@
 Utility functions used by multiple scripts.
 """
 
+import logging
 from azure.keyvault.secrets import SecretClient
 
-from lib.logging import logger
+logger = logging.getLogger(__name__)
 
 
 def get_secret(secret_client: SecretClient, secret_name: str) -> str:
