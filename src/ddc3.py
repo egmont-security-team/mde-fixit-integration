@@ -11,12 +11,9 @@ import re
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-from azure.monitor.opentelemetry import configure_azure_monitor
 
 from lib.mde import MDEClient, MDEDevice
 from lib.utils import get_secret
-
-configure_azure_monitor()
 
 DeviceDict = dict[str, list[MDEDevice]]
 
