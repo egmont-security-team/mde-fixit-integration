@@ -115,13 +115,13 @@ class FixItClient:
             case 401:
                 logger.error(
                     "Unauthorized for fetching the FixIt 4me request status",
-                    extra={"custom_dimensions": custom_dimensions},
+                    extra=custom_dimensions,
                 )
                 return None
             case 404:
                 logger.error(
                     f'The request "{request_id}" was not found in the FixIt 4me account.',
-                    extra={"custom_dimensions": custom_dimensions},
+                    extra=custom_dimensions,
                 )
                 return None
             case _:
@@ -190,13 +190,13 @@ class FixItClient:
             case 401:
                 logger.error(
                     "Unauthorized for creating the FixIt 4me request",
-                    extra={"custom_dimensions": custom_dimensions},
+                    extra=custom_dimensions,
                 )
                 return None
             case 404:
                 logger.error(
                     "Couldn't find the FixIt 4me template",
-                    extra={"custom_dimensions": custom_dimensions},
+                    extra=custom_dimensions,
                 )
                 return None
             case _:

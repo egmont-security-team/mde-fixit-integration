@@ -11,9 +11,12 @@ import re
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from azure.monitor.opentelemetry import configure_azure_monitor
 
 from lib.mde import MDEClient, MDEDevice
 from lib.utils import get_secret
+
+configure_azure_monitor()
 
 DeviceDict = dict[str, list[MDEDevice]]
 
@@ -38,6 +41,9 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     Actions:
         - Adds "ZZZ" tag to duplicate devices.
     """
+
+    if myTimer.past_due:
+        logger.warning("The timer is past due!")
 
     # SETUP - start
 

@@ -1,9 +1,7 @@
 [project]
 name = "mde_fixit_integration_DAEKJO"
 version = "0.0.1"
-authors = [
-  { name="DAEKJO", email="daekjo@egmont.com" },
-]
+authors = [{ name = "DAEKJO", email = "daekjo@egmont.com" }]
 description = "A MDE FixIt Automation Integration"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,3 +13,11 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/kanerix/mde-fixit-integration"
 Issues = "https://github.com/kanrix/mde-fixit-integration/issues"
+
+[tool.pylint.MESSAGES_CONTROL]
+disable = [
+    "line-too-long",
+    "logging-fstring-interpolation",
+    "invalid-name",
+    "duplicate-code",
+]

@@ -10,10 +10,13 @@ import os
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from azure.monitor.opentelemetry import configure_azure_monitor
 
 from lib.fixit import FixItClient
 from lib.mde import MDEClient, MDEDevice, MDEVulnerability
 from lib.utils import get_secret
+
+configure_azure_monitor()
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,9 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         - Create FixIt tickets for vulnerable devices.
         - Tags machine after creating FxiIt ticket.
     """
+
+    if myTimer.past_due:
+        logger.warning("The timer is past due!")
 
     # SETUP - start
 
@@ -118,7 +124,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             }
             logger.error(
                 f"No security recommendations found for {device}.",
-                extra={"custom_dimensions": custom_dimensions},
+                extra=custom_dimensions,
             )
             continue
 

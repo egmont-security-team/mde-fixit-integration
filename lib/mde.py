@@ -92,6 +92,7 @@ class MDEClient:
         wait=wait_fixed(120),
         retry=retry_if_exception_type(requests.HTTPError),
         before_sleep=before_sleep_log(logger, logging.WARNING),
+        retry_error_callback=lambda _: None,
         reraise=True,
     )
     def get_devices(
@@ -151,7 +152,7 @@ class MDEClient:
                     }
                     logger.error(
                         f'Couldn\'t create a new "MDEDevice" from the payload for device with UUID={new_device_id}.',
-                        extra={"custom_dimensions": custom_dimensions},
+                        extra=custom_dimensions,
                     )
 
             # The Microsoft Defender API has a limit of 10k devices per request.

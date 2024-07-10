@@ -4,16 +4,22 @@ Data Defender cleanup task 2. This means it removes FixIt tags
 from devices where the relative request is completed.
 """
 
+import logging
 import os
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from azure.monitor.opentelemetry import configure_azure_monitor
 
 from lib.fixit import FixItClient
-from lib.logging import logger
 from lib.mde import MDEClient
 from lib.utils import get_secret
+
+configure_azure_monitor()
+
+logger = logging.getLogger(__name__)
+
 
 bp = func.Blueprint()
 
@@ -32,6 +38,9 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
     Actions:
         - Removes closed FixIt tags from devices.
     """
+
+    if myTimer.past_due:
+        logger.warning("The timer is past due!")
 
     # SETUP - start
 
