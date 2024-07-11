@@ -139,10 +139,10 @@ class MDEClient:
                     devices.append(
                         MDEDevice(
                             new_device_id,
-                            name=payload["computerDnsName"],
-                            tags=payload["machineTags"],
-                            health=payload["health"],
-                            operating_system=payload["osPlatform"],
+                            name=payload.get("computerDnsName"),
+                            tags=payload.get("machineTags"),
+                            health=payload.get("health"),
+                            operating_system=payload.get("osPlatform"),
                         )
                     )
                 except ValueError:
@@ -271,11 +271,11 @@ class MDEClient:
                     vulnerabilities.append(
                         MDEVulnerability(
                             payload["id"],
-                            devices=payload["Devices"],
-                            cve_id=payload["CveId"],
-                            description=payload["VulnerabilityDescription"],
-                            software_name=payload["SoftwareName"],
-                            software_vendor=payload["SoftwareVendor"],
+                            devices=payload.get("Devices"),
+                            cve_id=payload("CveId"),
+                            description=payload("VulnerabilityDescription"),
+                            software_name=payload("SoftwareName"),
+                            software_vendor=payload("SoftwareVendor"),
                         )
                     )
                 except KeyError:
