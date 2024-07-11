@@ -2,7 +2,7 @@
 
 A Azure Function that uses data from Microsoft Defender and FixIt to automate certain tasks descried in the [Automation](#automation) sections.
 
-## Automation
+## Automations
 
 - [Cleanup FixIt Tags](#ddc2-cleanup-fixit-tags): Removes FixIt tags from devices if the FixIt requests is completed.
 
@@ -14,40 +14,32 @@ A Azure Function that uses data from Microsoft Defender and FixIt to automate ce
 
 #### DDC2: Cleanup FixIt tags
 
-Runs: On weekdays at 8 AM and 2 PM.
-
-Skip tags: `SKIP-DDC2`
+Checks if the device name is found multiple times in the Defender Portal. If the device does exists multiple times, we make sure it is inactive and then add the `ZZZ` tag to the devices.
 
 This checks all devices for FixIt tags and then checks if the ticket referenced by the tag is completed. If the FixIt request is completed, the tag is removed from the device.
 
-#### DDC3: Inactive Devices
+This checks all devices for FixIt tags and then checks if the referenced tag is closed in the FixIt portal. If the FixIt request referenced by the tag on the device is closed, the tag is removed from the device.
 
-Runs: On weekdays at 6 AM.
+#### Critical Exposure FixIt Requests
 
-Skip tags: `SKIP-DDC3`
+This checks for devices hit by vulnerabilities with a severity of `critical`. For each device hit by a vulnerability, a FixIt ticket is created. This ticket contains all recomended application updates for the device.
 
-Checks if multiple devices have the same name and one of them is inactive. If this is true, then the `ZZZ` tag is added to the device.
-
-#### CVE: Critical Exposure Tickets
-
-Runs: On weekdays at 8 AM.
-
-Skip tags: `SKIP-CVE`, `SKIP-CVE-[CVE-2024-9999]`
-
-This marks all devices hit by critical or high CVEs, older than 25 days. If the device has any recommended application software updates, a FixIt ticket will be automatically opened. CVEs that hit more than a certain [threshold](#configuration) is seen as a multi ticket and one ticket is created for all of the hit devices. If number is under the threshold, it is seen as a single ticket and 1 ticket will be created per device instead. If a device already have a FixIt tag, the device will be skipped.
-
-The FixIt ticket will hold following information:
-
-- The CVE ID and Software name and vendor if know.
-
-- Device Information such as UUID of the device, Users that use it, The OS and Name of the device.
-
-- Recommended Security updates (Only software updates)
+If a vulnerability has more vulnerable devices than a set [device threshold](#environment-variables[1]), a multiticket will instead be created for all the devices to be handled as one problem.
 
 ## Configuration
 
-Environment variables is set in the Azure Function app in Azure.
+### Environment variables
 
 - Set the environment variable `KEY_VAULT_NAME` to change what key vault will be used to load secrets.
+- Set the environment variable `CVE_DEVICE_THRESHOLD` to change how many devices under 1 vulnerability to create a multi ticket.
 
-- TODO: Set the environment variable `DEVICE_THRESHOLD` to change how many devices should be hit by a CVE, before it's seen as a multi ticket in the CVE automation.
+### Access needed
+
+**The access for FixIt:** You need an API token that can read and write/create requests.
+
+**The access for Microsoft Defender:** You need the scopes below:
+
+- Machine.ReadWrite.All
+- Vulnerability.Read.All
+- SecurityRecommendation.Read.All
+- AdvancedQuery.Read.All
