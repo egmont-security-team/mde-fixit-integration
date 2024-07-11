@@ -272,10 +272,10 @@ class MDEClient:
                         MDEVulnerability(
                             payload["id"],
                             devices=payload.get("Devices"),
-                            cve_id=payload("CveId"),
-                            description=payload("VulnerabilityDescription"),
-                            software_name=payload("SoftwareName"),
-                            software_vendor=payload("SoftwareVendor"),
+                            cve_id=payload.get("CveId"),
+                            description=payload.get("VulnerabilityDescription"),
+                            software_name=payload.get("SoftwareName"),
+                            software_vendor=payload.get("SoftwareVendor"),
                         )
                     )
                 except KeyError:
