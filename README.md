@@ -31,13 +31,14 @@ If a vulnerability has more vulnerable devices than a set [device threshold](#en
 ### Environment variables
 
 - Set the environment variable `KEY_VAULT_NAME` to change what key vault will be used to load secrets.
-- Set the environment variable `CVE_DEVICE_THRESHOLD` to change how many devices under 1 vulnerability, to count it as a multi vulnerability.
+- Set the environment variable `CVE_DEVICE_THRESHOLD` to change how many devices under 1 vulnerability to create a multi ticket.
 
 ### Access needed
 
 **The access for FixIt:** You need an API token that can read and write/create requests.
 
-**The access for Microsoft Defender:** You need the scope variables below:
+**The access for Microsoft Defender:** You need the scopes below:
+
 - Machine.ReadWrite.All
 - Vulnerability.Read.All
 - SecurityRecommendation.Read.All
