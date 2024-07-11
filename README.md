@@ -10,8 +10,6 @@ A Azure Function that uses data from Microsoft Defender and FixIt to automate ce
 
 - [Critical Exposure Requests](#critical-exposure-requests): Create a FixIt request for devices hit by a `critical` exposure CVE.
 
-- [High Exposure Requests](#high-exposure-requests): Create a FixIt request for devices hit by a `high` exposure CVE after 25 days.
-
 ### Detailed description
 
 #### Inactive Devices
@@ -26,11 +24,7 @@ This checks all devices for FixIt tags and then checks if the referenced tag is 
 
 This checks for devices hit by vulnerabilities with a severity of `critical`. For each device hit by a vulnerability, a FixIt ticket is created. This ticket contains all recomended application updates for the device.
 
-If a vulnerability has more vulnerable devices than a set [device threshold](#environment-variables[1]), a multiticket will instead be created and sent to another team.
-
-#### High Exposure Requests
-
-To be implemented.
+If a vulnerability has more vulnerable devices than a set [device threshold](#environment-variables[1]), a multiticket will instead be created for all the devices to be handled as one problem.
 
 ## Configuration
 
