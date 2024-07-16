@@ -270,9 +270,8 @@ class MDEClient:
                 try:
                     vulnerabilities.append(
                         MDEVulnerability(
-                            payload["id"],
+                            payload["CveId"],
                             devices=payload.get("Devices"),
-                            cve_id=payload.get("CveId"),
                             description=payload.get("VulnerabilityDescription"),
                             software_name=payload.get("SoftwareName"),
                             software_vendor=payload.get("SoftwareVendor"),
@@ -483,18 +482,16 @@ class MDEVulnerability:
     https://learn.microsoft.com/en-us/defender-endpoint/api/vulnerability?view=o365-worldwide#properties
     """
 
-    uuid: str
+    cve_id: str
     devices: Optional[list[str]]
-    cve_id: Optional[str]
     description: Optional[str]
     software_name: Optional[str]
     software_vendor: Optional[str]
 
     def __init__(
         self,
-        uuid: str,
+        cve_id: str,
         devices: Optional[list[str]] = None,
-        cve_id: Optional[str] = None,
         description: Optional[str] = None,
         software_name: Optional[str] = None,
         software_vendor: Optional[str] = None,
@@ -503,14 +500,12 @@ class MDEVulnerability:
         Create a new Microsoft Defender for Endpoint vulnerability.
 
         params:
-            uuid:
-                str: The UUID of the vulnerability from defender.
+            cve_id:
+                str: The UUID of the Microsoft Defender for Endpoint vulnerability.
+                None: No CVE ID is provided.
             devices=None:
                 list[str]: A list of device UUIDs hit by the vulnerability.
                 None: No devices are provided.
-            cve_id=None:
-                str: The UUID of the Microsoft Defender for Endpoint vulnerability.
-                None: No CVE ID is provided.
             description=None:
                 None: No description provided.
                 str: The vulnerability description.
@@ -524,7 +519,6 @@ class MDEVulnerability:
         returns:
             MDEVulnerability: The Microsoft Defender Vulnerability.
         """
-        self.uuid = uuid
         self.cve_id = cve_id
         self.description = description
         self.devices = devices
@@ -543,7 +537,7 @@ class MDEVulnerability:
         """
         Two vulnerabilities are equal if they have the same UUID.
         """
-        return self.uuid == other.uuid
+        return self.cve_id == other.cve_id
 
     def __ne__(self, other: MDEVulnerability):
         """
