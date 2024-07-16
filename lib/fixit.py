@@ -199,6 +199,12 @@ class FixItClient:
                     extra=custom_dimensions,
                 )
                 return None
+            case 422:
+                logger.error(
+                    "Invalid request for creating the FixIt 4me request",
+                    extra=custom_dimensions,
+                )
+                return None
             case _:
                 res.raise_for_status()
 
