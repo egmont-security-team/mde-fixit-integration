@@ -90,7 +90,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
             continue
 
         if device.tags is None:
-            logger.warning(f"Skipping device {device} since it has no tags.")
+            logger.warning(f"Skipping {device} since it has no tags.")
             continue
 
         for tag in device.tags:
