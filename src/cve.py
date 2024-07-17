@@ -70,6 +70,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     FIXIT_4ME_API_KEY = get_secret(secret_client, "FixIt-4Me-API-Key")
     FIXIT_SINGLE_TEMPLATE_ID = get_secret(secret_client, "CVE-Single-FixIt-Template-ID")
     FIXIT_MULTI_TEMPLATE_ID = get_secret(secret_client, "CVE-Multi-FixIt-Template-ID")
+    FIXIT_SERVICE_INSTANCE_ID = get_secret(secret_client, "CVE-Service-Instance-ID")
 
     mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
     fixit_client = FixItClient(FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY)
@@ -139,6 +140,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             {"id": "recommended_security_updates", "value": "\n".join(recommendations)},
         ]
         fixit_res = fixit_client.create_request(
+            FIXIT_SERVICE_INSTANCE_ID,
             f"Security[{vulnerability.cve_id}]: Single Vulnerable Device",
             FIXIT_SINGLE_TEMPLATE_ID,
             custom_fields=custom_fields,
@@ -202,6 +204,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             {"id": "device_count", "value": f"{str(len(vulnerable_devices))} affected"},
         ]
         fixit_res = fixit_client.create_request(
+            FIXIT_SERVICE_INSTANCE_ID,
             f"Security[{vulnerability.cve_id}]: Multiple Vulnerable Devices",
             FIXIT_MULTI_TEMPLATE_ID,
             custom_fields=custom_fields,

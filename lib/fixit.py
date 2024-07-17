@@ -141,6 +141,7 @@ class FixItClient:
     )
     def create_request(
         self,
+        service_instace_id: str,
         subject: str,
         template_id: str,
         custom_fields: Optional[list[dict[str, str]]] = None,
@@ -149,6 +150,8 @@ class FixItClient:
         Create a FixIt request in the FixIt 4me account.
 
         params:
+            service_instace_id:
+                str: The service instance ID of the request.
             subject:
                 str: The subject of the FixIt request.
             template_id:
@@ -161,6 +164,9 @@ class FixItClient:
             str: The JSON response of the created request.
         """
         payload = {
+            # The service instance of the request.
+            "service_instance_id": service_instace_id,
+            # The subject of the request.
             "subject": subject,
             # The template ID from FixIt.
             "template_id": template_id,
@@ -189,19 +195,19 @@ class FixItClient:
         match res.status_code:
             case 401:
                 logger.error(
-                    "Unauthorized for creating the FixIt 4me request",
+                    "Unauthorized for creating the FixIt 4me request.",
                     extra=custom_dimensions,
                 )
                 return None
             case 404:
                 logger.error(
-                    "Couldn't find the FixIt 4me template",
+                    "Couldn't find the FixIt 4me template.",
                     extra=custom_dimensions,
                 )
                 return None
             case 422:
                 logger.error(
-                    "Invalid request for creating the FixIt 4me request",
+                    "Invalid request for creating the FixIt 4me request.",
                     extra=custom_dimensions,
                 )
                 return None
