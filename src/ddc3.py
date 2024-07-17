@@ -87,8 +87,8 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     duplicate_devices_tagged = 0
 
-    for _, devices in device_dict.items():
-        for _, device in enumerate(devices):
+    for devices in device_dict.values():
+        for device in devices:
             if device.tags is None:
                 logger.warning(f"Skipping device {device} since it has no tags")
                 continue
