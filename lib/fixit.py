@@ -141,38 +141,26 @@ class FixItClient:
     )
     def create_request(
         self,
-        service_instace_id: str,
         subject: str,
-        template_id: str,
-        custom_fields: Optional[list[dict[str, str]]] = None,
+        **kwargs,
     ) -> Optional[dict]:
         """
         Create a FixIt request in the FixIt 4me account.
 
         params:
-            service_instace_id:
-                str: The service instance ID of the request.
             subject:
                 str: The subject of the FixIt request.
-            template_id:
-                str: The template ID for the template in FixIt.
-            custom_fields:
-                list[str]: A list of custom fields for the template.
-                None: No custom feilds provided.
+            **kwargs:
+                dict: The other parameters to pass to the FixIt 4me API.
 
         returns:
             str: The JSON response of the created request.
         """
         payload = {
-            # The service instance of the request.
-            "service_instance_id": service_instace_id,
-            # The subject of the request.
-            "subject": subject,
-            # The template ID from FixIt.
-            "template_id": template_id,
-            # Custom template fields.
-            "custom_fields": custom_fields,
+            "subject": subject
         }
+
+        payload.update(kwargs)
 
         res = requests.post(
             f"{self.base_url}/requests",

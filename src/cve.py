@@ -6,6 +6,7 @@ for devices hit by certain CVE.
 
 import logging
 import os
+from typing import Any
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
@@ -68,9 +69,14 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     FIXIT_4ME_BASE_URL = get_secret(secret_client, "FixIt-4Me-Base-URL")
     FIXIT_4ME_ACCOUNT = get_secret(secret_client, "FixIt-4Me-Account")
     FIXIT_4ME_API_KEY = get_secret(secret_client, "FixIt-4Me-API-Key")
+
     FIXIT_SINGLE_TEMPLATE_ID = get_secret(secret_client, "CVE-Single-FixIt-Template-ID")
     FIXIT_MULTI_TEMPLATE_ID = get_secret(secret_client, "CVE-Multi-FixIt-Template-ID")
     FIXIT_SERVICE_INSTANCE_ID = get_secret(secret_client, "CVE-Service-Instance-ID")
+    FIXIT_SECURITY_TEAM_ID = get_secret(secret_client, "CVE-Security-Team-ID")
+    FIXIT_SECURITY_SERVICE_INSTANCE_ID = get_secret(
+        secret_client, "CVE-Security-Service-Instance-ID"
+    )
 
     mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
     fixit_client = FixItClient(FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY)
@@ -114,21 +120,22 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             continue
 
         recommendations = mde_client.get_device_recommendations(device)
-        if len(recommendations) < 1:
-            # TODO: Alert security that device has critical vulnerability, but has no security recommendations that is application updates.
-            custom_dimensions = {
-                "device": device.uuid,
-                "cve": vulnerability.cve_id,
-            }
-            logger.error(
-                f"No security recommendations found for {device}.",
-                extra=custom_dimensions,
-            )
-            continue
 
         logger.info(f"Creating single ticket for {device}.")
 
-        custom_fields = [
+        if len(recommendations) > 3:
+            request_config: dict[str, Any] = {
+                "service_instance_id": FIXIT_SERVICE_INSTANCE_ID,
+            }
+        else:
+            # Send request to security if there is no recommendations.
+            request_config: dict[str, Any] = {
+                "service_instance_id": FIXIT_SECURITY_SERVICE_INSTANCE_ID,
+                "team": FIXIT_SECURITY_TEAM_ID,
+            }
+
+        request_config["template_id"] = FIXIT_SINGLE_TEMPLATE_ID
+        request_config["custom_fields"] = [
             {"id": "cve", "value": vulnerability.cve_id},
             {"id": "cve_description", "value": vulnerability.description or ""},
             {"id": "software_name", "value": vulnerability.software_name or ""},
@@ -139,16 +146,15 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             {"id": "device_users", "value": device.users},
             {"id": "recommended_security_updates", "value": "\n".join(recommendations)},
         ]
+
         fixit_res = fixit_client.create_request(
-            FIXIT_SERVICE_INSTANCE_ID,
             f"Security[{vulnerability.cve_id}]: Single Vulnerable Device",
-            FIXIT_SINGLE_TEMPLATE_ID,
-            custom_fields=custom_fields,
+            **request_config,
         )
 
         if fixit_res is None:
             logger.error(
-                f"Did not succesfully create the FixIt ticket for {device}. Skipping.."
+                f"Did not succesfully create the FixIt request for {device} (SINGLE). Skipping.."
             )
             continue
 
@@ -165,7 +171,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         if not vulnerability.devices:
             logger.warning(
-                f"Skipping vulnerability {vulnerability} since it has no affected devices."
+                f"Skipping {vulnerability} since it has no affected devices."
             )
             continue
 
@@ -196,23 +202,28 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         logger.info(f"Creating multi ticket for {device}.")
 
-        custom_fields = [
-            {"id": "cve", "value": vulnerability.cve_id},
-            {"id": "cve_description", "value": vulnerability.description or ""},
-            {"id": "software_name", "value": vulnerability.software_name or ""},
-            {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
-            {"id": "device_count", "value": f"{str(len(vulnerable_devices))} affected"},
-        ]
+        device_count = str(len(vulnerable_devices))
+
+        request_config: dict[str, Any] = {
+            "service_instance_id": FIXIT_SERVICE_INSTANCE_ID,
+            "template_id": FIXIT_MULTI_TEMPLATE_ID,
+            "custom_fields": [
+                {"id": "cve", "value": vulnerability.cve_id},
+                {"id": "cve_description", "value": vulnerability.description or ""},
+                {"id": "software_name", "value": vulnerability.software_name or ""},
+                {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
+                {"id": "device_count", "value": f"{device_count} affected devices"},
+            ],
+        }
+
         fixit_res = fixit_client.create_request(
-            FIXIT_SERVICE_INSTANCE_ID,
             f"Security[{vulnerability.cve_id}]: Multiple Vulnerable Devices",
-            FIXIT_MULTI_TEMPLATE_ID,
-            custom_fields=custom_fields,
+            **request_config,
         )
 
         if fixit_res is None:
             logger.error(
-                f"Did not succesfully create the FixIt ticket for multi {vulnerability}. Skipping.."
+                f"Did not succesfully create the FixIt request for {vulnerability} (MULTI). Skipping.."
             )
             continue
 
