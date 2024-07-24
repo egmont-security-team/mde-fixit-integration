@@ -13,7 +13,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
 from lib.mde import MDEClient, MDEDevice
-from lib.utils import get_secret
+from lib.utils import secret
 
 DeviceDict = dict[str, list[MDEDevice]]
 
@@ -63,9 +63,9 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     )
 
     # Microsoft Defender for Endpoint secrets
-    MDE_TENANT = get_secret(secret_client, "Azure-MDE-Tenant")
-    MDE_CLIENT_ID = get_secret(secret_client, "Azure-MDE-Client-ID")
-    MDE_SECRET_VALUE = get_secret(secret_client, "Azure-MDE-Secret-Value")
+    MDE_TENANT = secret(secret_client, "Azure-MDE-Tenant")
+    MDE_CLIENT_ID = secret(secret_client, "Azure-MDE-Client-ID")
+    MDE_SECRET_VALUE = secret(secret_client, "Azure-MDE-Secret-Value")
 
     mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
 
