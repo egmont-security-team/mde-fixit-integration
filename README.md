@@ -1,6 +1,6 @@
 # MDE FixIt Integration
 
-A Azure Function that uses data from Microsoft Defender and FixIt to automate certain tasks descried in the [Automation](#automation) sections.
+A Azure Function that uses data from Microsoft Defender and FixIt to automate certain tasks described in the [Automations](#automations) sections.
 
 ## Automations
 
@@ -8,23 +8,36 @@ A Azure Function that uses data from Microsoft Defender and FixIt to automate ce
 
 - [Inactive Devices](#ddc3-inactive-devices): Adds `ZZZ` tags to duplicate devices in the Defender Portal.
 
-- [Critical Exposure Tickets](#cve-critical-exposure-tickets): Create a FixIt request for devices hit by a `critical` CVEs.
+- [Critical Exposure Tickets](#cve-critical-exposed-devices): Create a FixIt request for devices hit by a `critical` CVEs.
 
 ### Detailed description
 
 #### DDC2: Cleanup FixIt tags
 
-Checks if the device name is found multiple times in the Defender Portal. If the device does exists multiple times, we make sure it is inactive and then add the `ZZZ` tag to the devices.
-
 This checks all devices for FixIt tags and then checks if the ticket referenced by the tag is completed. If the FixIt request is completed, the tag is removed from the device.
 
 This checks all devices for FixIt tags and then checks if the referenced tag is closed in the FixIt portal. If the FixIt request referenced by the tag on the device is closed, the tag is removed from the device.
 
-#### Critical Exposure FixIt Requests
+#### DDC3: Inactive Devices
 
-This checks for devices hit by vulnerabilities with a severity of `critical`. For each device hit by a vulnerability, a FixIt ticket is created. This ticket contains all recomended application updates for the device.
+Checks if the device name is found multiple times in the Defender Portal. If the device does exists multiple times, we make sure it is inactive and then add the `ZZZ` tag to the devices.
 
-If a vulnerability has more vulnerable devices than a set [device threshold](#environment-variables[1]), a multiticket will instead be created for all the devices to be handled as one problem.
+#### CVE: Critical Exposed Devices
+
+This checks for devices hit by vulnerabilities with a severity of `critical`. For each device hit by a vulnerability, a FixIt ticket is created. This ticket contains all recommended application updates for the device.
+
+If no application updates is found, the ticket is sent to the security team instead of service desk.
+
+If a vulnerability has more vulnerable devices than a set [device threshold](#environment-variables), a multiticket will instead be created for all the devices to be handled as one vulnerability. This will also send the ticket the EUX instead.
+
+### Skipping Automations
+
+If a device should not be included in a automation, you can give specific tags in the defender portal. These tags are the following:
+
+- `SKIP-DDC2`: Skip the [DDC2](#ddc2-cleanup-fixit-tags) automation.
+- `SKIP-DDC3`: Skip the [DDC3](#ddc3-inactive-devices) automation.
+- `SKIP-CVE`: Skip the [CVE](#cve-critical-exposed-devices) automation.
+- `SKIP-CVE[CVE-XXXX-XXXXXXX]`: Skip a specefic CVE in the [CVE](#cve-critical-exposed-devices) automation.
 
 ## Configuration
 
@@ -32,6 +45,26 @@ If a vulnerability has more vulnerable devices than a set [device threshold](#en
 
 - Set the environment variable `KEY_VAULT_NAME` to change what key vault will be used to load secrets.
 - Set the environment variable `CVE_DEVICE_THRESHOLD` to change how many devices under 1 vulnerability to create a multi ticket.
+
+### Secrets
+
+#### MDE
+
+- `MDE_TENANT`: Set this to change what tenant the MDE environment is in.
+- `MDE_CLIENT_ID`: The client id of the enterpise app for defender.
+- `MDE_SECRET_VALUE`: The secret value of the enterpise app for defender.
+
+#### FixIt
+
+- `FIXIT_4ME_BASE_URL`: The [base URL](https://developer.4me.com/v1/) of the FixIt 4me API (also called service URL)
+- `FIXIT_4ME_ACCOUNT`: The FxiIt 4me account which we check.
+- `FIXIT_4ME_API_KEY`: The API key with the right permission from the [Access neded](#access-needed) section.
+- `FIXIT_SINGLE_TEMPLATE_ID`: The template if of how a single vulnerable device request would look.
+- `FIXIT_MULTI_TEMPLATE_ID`: The template if of how a multi vulnerablity request would look.
+- `FIXIT_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created.
+- `FIXIT_SD_TEAM_ID`: The team ID of the service desk team.
+- `FIXIT_EUX_TEAM_ID`: The team ID of the end user experience team.
+- `FIXIT_SEC_TEAM_ID`: The team ID of the security team.
 
 ### Access needed
 
