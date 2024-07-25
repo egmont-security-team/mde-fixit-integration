@@ -76,3 +76,4 @@ If a device should not be included in a automation, you can give specific tags i
 - Vulnerability.Read.All
 - SecurityRecommendation.Read.All
 - AdvancedQuery.Read.All
+- User.Read.All

@@ -24,7 +24,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -118,6 +118,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             logger.info(f"Skipping {device} because it has a FixIt request tag.")
             continue
 
+        users = mde_client.get_device_users(device)
         recommendations = mde_client.get_device_recommendations(device)
 
         logger.info(f"Creating single ticket for {device}.")
@@ -133,7 +134,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
                 {"id": "device_os", "value": device.os},
-                {"id": "device_users", "value": device.users or "Unkown"},
+                {"id": "device_users", "value": users or "Unkown"},
                 {"id": "recommendations", "value": "\n".join(recommendations)},
             ],
         }

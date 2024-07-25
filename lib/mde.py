@@ -96,7 +96,9 @@ class MDEClient:
         reraise=True,
     )
     def get_devices(
-        self, odata_filter: str = "(computerDnsName ne null) and (isExcluded eq false)"
+        self,
+        odata_filter: str = "(computerDnsName ne null) and (isExcluded eq false)",
+        get_users: bool = False,
     ) -> list[MDEDevice]:
         """
         Gets a list of all devices from Microsoft Defender for Endpoint.
@@ -135,6 +137,7 @@ class MDEClient:
             # Turn the JSON payloads from MDE into MDEDevice objects.
             for payload in new_devices:
                 new_device_id = payload["id"]
+
                 try:
                     devices.append(
                         MDEDevice(
@@ -297,6 +300,60 @@ class MDEClient:
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=4),
         retry=retry_if_exception_type(requests.HTTPError),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        retry_error_callback=lambda _: None,
+        reraise=True,
+    )
+    def get_device_users(self, device: MDEDevice) -> list[str]:
+        """
+        Get a list of users on the device.
+
+        returns:
+            list[str]: The device users.
+        """
+        users: list[str] = []
+
+        users_url = f"https://api.securitycenter.microsoft.com/api/machines/{device.uuid}/logonusers"
+
+        while users_url:
+            res = requests.get(
+                users_url,
+                headers={"Authorization": f"Bearer {self.api_token}"},
+                timeout=300,
+            )
+
+            res.raise_for_status()
+
+            json = res.json()
+
+            new_users = json["value"]
+            logger.debug(
+                f"Fetched {len(new_users)} new users from Microsoft Defender for Endpoint."
+            )
+
+            for payload in new_users:
+                try:
+                    users.append(payload["accountName"])
+                except KeyError:
+                    logger.error(
+                        f'Couldn\'t create a new "MDEVulnerability" from the payload {payload}.'
+                    )
+
+            # The Microsoft Defender API has a limit of 8k rows per request.
+            # In case this URL exists, this means that more rows can be fetched.
+            # This URL given here can be used to fetch the next devices.
+            users_url = json.get("@odata.nextLink")
+
+        logger.info(
+            f"Fetched a total of {len(users)} users from Microsoft Defender for Endpoint."
+        )
+
+        return users
+
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=4),
+        retry=retry_if_exception_type(requests.HTTPError),
         reraise=True,
     )
     def get_device_recommendations(
@@ -358,7 +415,6 @@ class MDEDevice:
     name: Optional[str]
     health: Optional[str]
     os: Optional[str]
-    users: Optional[list[str]]
     tags: Optional[list[str]]
 
     def __init__(
@@ -367,7 +423,6 @@ class MDEDevice:
         name: Optional[str] = None,
         health: Optional[str] = None,
         operating_system: Optional[str] = None,
-        users: Optional[list[str]] = None,
         tags: Optional[list[str]] = None,
     ):
         """
@@ -385,9 +440,6 @@ class MDEDevice:
             operating_system=None:
                 str: The OS of the Microsoft Defender for Endpoint device.
                 None: No OS is provided.
-            users=None:
-                list[str]: A list of users that used the machine.
-                None: No users are provided.
             tags=None:
                 list[str]: The tags of the Microsoft Defender for Endpoint device.
                 None: No tags are provided.
@@ -399,7 +451,6 @@ class MDEDevice:
         self.name = name
         self.health = health
         self.os = operating_system
-        self.users = users
         self.tags = tags
 
     def __str__(self) -> str:
