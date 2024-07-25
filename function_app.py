@@ -9,6 +9,6 @@ configure_azure_monitor(
 
 app = func.FunctionApp()
 
-# app.register_blueprint(cve.bp)
+app.register_blueprint(cve.bp)
 app.register_blueprint(ddc2.bp)
 app.register_blueprint(ddc3.bp)
