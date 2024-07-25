@@ -73,10 +73,9 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     FIXIT_SINGLE_TEMPLATE_ID = get_secret(secret_client, "CVE-Single-FixIt-Template-ID")
     FIXIT_MULTI_TEMPLATE_ID = get_secret(secret_client, "CVE-Multi-FixIt-Template-ID")
     FIXIT_SERVICE_INSTANCE_ID = get_secret(secret_client, "CVE-Service-Instance-ID")
-    FIXIT_SECURITY_TEAM_ID = get_secret(secret_client, "CVE-Security-Team-ID")
-    FIXIT_SECURITY_SERVICE_INSTANCE_ID = get_secret(
-        secret_client, "CVE-Security-Service-Instance-ID"
-    )
+    FIXIT_SD_TEAM_ID = get_secret(secret_client, "CVE-SD-Team-ID")
+    FIXIT_EUX_TEAM_ID = get_secret(secret_client, "CVE-EUX-Team-ID")
+    FIXIT_SEC_TEAM_ID = get_secret(secret_client, "CVE-SEC-Team-ID")
 
     mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
     fixit_client = FixItClient(FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY)
@@ -123,29 +122,26 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         logger.info(f"Creating single ticket for {device}.")
 
-        if len(recommendations) > 3:
-            request_config: dict[str, Any] = {
-                "service_instance_id": FIXIT_SERVICE_INSTANCE_ID,
-            }
-        else:
-            # Send request to security if there is no recommendations.
-            request_config: dict[str, Any] = {
-                "service_instance_id": FIXIT_SECURITY_SERVICE_INSTANCE_ID,
-                "team": FIXIT_SECURITY_TEAM_ID,
-            }
+        request_config: dict[str, Any] = {
+            "service_instance_id": FIXIT_SERVICE_INSTANCE_ID,
+            "template_id": FIXIT_SINGLE_TEMPLATE_ID,
+            "custom_fields": [
+                {"id": "cve", "value": vulnerability.cve_id},
+                {"id": "cve_description", "value": vulnerability.description},
+                {"id": "software_name", "value": vulnerability.software_name},
+                {"id": "software_vendor", "value": vulnerability.software_vendor},
+                {"id": "device_name", "value": device.name},
+                {"id": "device_uuid", "value": device.uuid},
+                {"id": "device_os", "value": device.os},
+                {"id": "device_users", "value": device.users or "Unkown"},
+                {"id": "recommendations", "value": "\n".join(recommendations)},
+            ],
+        }
 
-        request_config["template_id"] = FIXIT_SINGLE_TEMPLATE_ID
-        request_config["custom_fields"] = [
-            {"id": "cve", "value": vulnerability.cve_id},
-            {"id": "cve_description", "value": vulnerability.description or ""},
-            {"id": "software_name", "value": vulnerability.software_name or ""},
-            {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
-            {"id": "device_name", "value": device.name},
-            {"id": "device_uuid", "value": device.uuid},
-            {"id": "device_os", "value": device.os},
-            {"id": "device_users", "value": device.users},
-            {"id": "recommended_security_updates", "value": "\n".join(recommendations)},
-        ]
+        if len(recommendations) == 0:
+            request_config["team"] = FIXIT_SEC_TEAM_ID
+        else:
+            request_config["team"] = FIXIT_SD_TEAM_ID
 
         fixit_res = fixit_client.create_request(
             f"Security[{vulnerability.cve_id}]: Single Vulnerable Device",
@@ -206,6 +202,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         request_config: dict[str, Any] = {
             "service_instance_id": FIXIT_SERVICE_INSTANCE_ID,
+            "team": FIXIT_EUX_TEAM_ID,
             "template_id": FIXIT_MULTI_TEMPLATE_ID,
             "custom_fields": [
                 {"id": "cve", "value": vulnerability.cve_id},
