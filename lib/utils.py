@@ -8,7 +8,7 @@ from azure.keyvault.secrets import SecretClient
 logger = logging.getLogger(__name__)
 
 
-def secret(secret_client: SecretClient, secret_name: str) -> str:
+def get_secret(secret_client: SecretClient, secret_name: str) -> str:
     """
     Get a secret from Azure Key Vault.
 
