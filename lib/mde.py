@@ -331,17 +331,8 @@ class MDEClient:
                 f"Fetched {len(new_users)} new users from Microsoft Defender for Endpoint."
             )
 
-            for payload in new_users:
-                try:
-                    users.append(payload["accountName"])
-                except KeyError:
-                    logger.error(
-                        f'Couldn\'t create a new "MDEVulnerability" from the payload {payload}.'
-                    )
+            users.extend(user["accountName"] for user in new_users)
 
-            # The Microsoft Defender API has a limit of 8k rows per request.
-            # In case this URL exists, this means that more rows can be fetched.
-            # This URL given here can be used to fetch the next devices.
             users_url = json.get("@odata.nextLink")
 
         logger.info(
