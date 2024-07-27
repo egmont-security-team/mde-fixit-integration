@@ -134,7 +134,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
                 {"id": "device_os", "value": device.os},
-                {"id": "device_users", "value": ", ".join(users) or "Unkown"},
+                {"id": "device_users", "value": ", ".join(users or ["Unkown"])},
                 {"id": "recommendations", "value": "\n".join(recommendations)},
             ],
         }
