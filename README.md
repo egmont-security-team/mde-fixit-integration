@@ -8,7 +8,7 @@ A Azure Function that uses data from Microsoft Defender and FixIt to automate ce
 
 - [Inactive Devices](#ddc3-inactive-devices): Adds `ZZZ` tags to duplicate devices in the Defender Portal.
 
-- [Critical Exposure Tickets](#cve-critical-exposed-devices): Create a FixIt request for devices hit by a `critical` CVEs.
+- [Critical Exposure Tickets](#cve-critical-exposed-devices): Create a FixIt request for devices hit by `critical` CVEs.
 
 ### Detailed description
 
