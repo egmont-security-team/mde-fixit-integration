@@ -59,8 +59,8 @@ If a device should not be included in a automation, you can give specific tags i
 - `FIXIT_4ME_BASE_URL`: The [base URL](https://developer.4me.com/v1/) of the FixIt 4me API (also called service URL)
 - `FIXIT_4ME_ACCOUNT`: The FxiIt 4me account which we check.
 - `FIXIT_4ME_API_KEY`: The API key with the right permission from the [Access neded](#access-needed) section.
-- `FIXIT_SINGLE_TEMPLATE_ID`: The template if of how a single vulnerable device request would look.
-- `FIXIT_MULTI_TEMPLATE_ID`: The template if of how a multi vulnerablity request would look.
+- `FIXIT_SINGLE_TEMPLATE_ID`: The template ID of the single vulnerable device template.
+- `FIXIT_MULTI_TEMPLATE_ID`: The template ID of the a multiple vulnerable devices template.
 - `FIXIT_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created.
 - `FIXIT_SD_TEAM_ID`: The team ID of the service desk team.
 - `FIXIT_EUX_TEAM_ID`: The team ID of the end user experience team.
