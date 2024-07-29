@@ -32,7 +32,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     This function automatically creates a FixIt tickets for vulnerable devices.
     For detailed description of what this does refer to the README.md.
 
-    actions:
+    Actions:
         - Create FixIt tickets for vulnerable devices.
         - Tags machine after creating FxiIt ticket.
     """
@@ -123,14 +123,21 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         logger.info(f"Creating single ticket for {device}.")
 
+        cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
+        device_page = (
+            f"https://security.microsoft.com/machines/v2/{device.uuid}/overview"
+        )
+
         request_config: dict[str, Any] = {
             "service_instance_id": FIXIT_SERVICE_INSTANCE_ID,
             "template_id": FIXIT_SINGLE_TEMPLATE_ID,
             "custom_fields": [
-                {"id": "cve", "value": vulnerability.cve_id},
+                {"id": "cve_page", "value": cve_page},
+                {"id": "cve_id", "value": vulnerability.cve_id},
                 {"id": "cve_description", "value": vulnerability.description},
                 {"id": "software_name", "value": vulnerability.software_name},
                 {"id": "software_vendor", "value": vulnerability.software_vendor},
+                {"id": "device_page", "value": device_page},
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
                 {"id": "device_os", "value": device.os},
@@ -199,6 +206,8 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
         logger.info(f"Creating multi ticket for {device}.")
 
+        cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
+
         device_count = str(len(vulnerable_devices))
 
         request_config: dict[str, Any] = {
@@ -206,7 +215,8 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             "team": FIXIT_EUX_TEAM_ID,
             "template_id": FIXIT_MULTI_TEMPLATE_ID,
             "custom_fields": [
-                {"id": "cve", "value": vulnerability.cve_id},
+                {"id": "cve_page", "value": cve_page},
+                {"id": "cve_id", "value": vulnerability.cve_id},
                 {"id": "cve_description", "value": vulnerability.description or ""},
                 {"id": "software_name", "value": vulnerability.software_name or ""},
                 {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
