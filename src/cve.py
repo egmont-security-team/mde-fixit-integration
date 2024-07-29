@@ -24,7 +24,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -134,7 +134,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
                 {"id": "device_os", "value": device.os},
-                {"id": "device_users", "value": ", ".join(users) or "Unkown"},
+                {"id": "device_users", "value": ", ".join(users or ["Unknown"])},
                 {"id": "recommendations", "value": "\n".join(recommendations)},
             ],
         }
