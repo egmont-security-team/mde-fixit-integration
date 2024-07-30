@@ -83,6 +83,8 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
         "Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal."
     )
 
+    fetched_requests: dict[str, str] = {}
+
     removed_fixit_tags = 0
 
     for device in devices:
@@ -99,7 +101,16 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
             if not request_id:
                 continue
 
-            request_status = fixit_client.get_request_status(request_id)
+            if request_id not in fetched_requests:
+                request_status = fixit_client.get_request_status(request_id)
+
+                if request_status is None:
+                    logger.error("Failed to fetch the status of the FixIt request.")
+                    continue
+
+                fetched_requests[request_id] = request_status
+
+            request_status = fetched_requests[request_id]
 
             if request_status == "completed":
                 if mde_client.alter_device_tag(device, tag, "Remove"):
