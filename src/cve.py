@@ -189,7 +189,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 )
                 continue
 
-            if not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):
+            if not device.first_seen > (datetime.now(UTC) - timedelta(days=7)):
                 logger.debug(
                     f"Skipping {device} since it has not been in registered for more than 7 days."
                 )
