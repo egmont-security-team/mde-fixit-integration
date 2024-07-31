@@ -147,7 +147,7 @@ class MDEClient:
                             health=payload["healthStatus"],
                             operating_system=payload["osPlatform"],
                             tags=payload["machineTags"],
-                            first_seen=datetime.fromisoformat(payload["firstSeen"])
+                            first_seen=datetime.fromisoformat(payload["firstSeen"]),
                         )
                     )
                 except ValueError:
@@ -184,7 +184,7 @@ class MDEClient:
         device: MDEDevice,
         tag: str,
         action: Literal["Add", "Remove"],
-        sleep: Optional[float] = None
+        sleep: Optional[float] = None,
     ) -> Optional[bool]:
         """
         Alters a tag for a given device using Microsoft Defender for Endpoint.
@@ -239,6 +239,9 @@ class MDEClient:
         """
         vulnerabilities: list[MDEVulnerability] = []
 
+        # IMPORTANT: The "DeviceInfo" table is broken and we can't rely on it.
+        # If needed to filter in devices, use get_devices as a mapping instead
+        # to access devices fields.
         kudos_query: str = """
         DeviceTvmSoftwareVulnerabilities
         | where VulnerabilitySeverityLevel == 'Critical'
@@ -249,7 +252,6 @@ class MDEClient:
         ) on CveId
         | join kind=inner (
             DeviceInfo
-            | where IsExcluded == false and isnotempty(OSPlatform) and SensorHealthState == "Active"
             | summarize arg_max(Timestamp, *) by DeviceId
             | project DeviceId
         ) on DeviceId
