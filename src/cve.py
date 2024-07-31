@@ -306,7 +306,7 @@ def get_vulnerable_devices(
             continue
 
         if len(vulnerability.devices) >= device_threshold:
-            multi_vulnerable_devices[vulnerability.cve_id] = vulnerability
+            multi_vulnerable_devices[f"{vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}"] = vulnerability
             continue
 
         for device_uuid in vulnerability.devices:

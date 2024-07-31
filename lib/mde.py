@@ -281,11 +281,11 @@ class MDEClient:
                 try:
                     vulnerabilities.append(
                         MDEVulnerability(
-                            payload["CveId"],
-                            devices=payload.get("Devices"),
-                            description=payload.get("VulnerabilityDescription"),
-                            software_name=payload.get("SoftwareName"),
-                            software_vendor=payload.get("SoftwareVendor"),
+                            cve_id=payload["CveId"],
+                            devices=payload["Devices"],
+                            description=payload["VulnerabilityDescription"],
+                            software_name=payload["SoftwareName"],
+                            software_vendor=payload["SoftwareVendor"],
                         )
                     )
                 except KeyError:
@@ -451,6 +451,7 @@ class MDEDevice:
         self.health = health
         self.os = operating_system
         self.tags = tags
+        self.first_seen = first_seen
 
     def __str__(self) -> str:
         """
@@ -535,16 +536,16 @@ class MDEVulnerability:
     cve_id: str
     devices: list[str]
     description: str
-    software_name: Optional[str]
-    software_vendor: Optional[str]
+    software_name: str
+    software_vendor: str
 
     def __init__(
         self,
         cve_id: str,
         devices: list[str],
         description: str,
-        software_name: Optional[str] = None,
-        software_vendor: Optional[str] = None,
+        software_name: str,
+        software_vendor: str,
     ):
         """
         Create a new Microsoft Defender for Endpoint vulnerability.
@@ -552,19 +553,14 @@ class MDEVulnerability:
         params:
             cve_id:
                 str: The UUID of the Microsoft Defender for Endpoint vulnerability.
-                None: No CVE ID is provided.
-            devices=None:
-                list[str]: A list of device UUIDs hit by the vulnerability.
-                None: No devices are provided.
-            description=None:
-                None: No description provided.
+            description:
                 str: The vulnerability description.
-            softwareName=None:
+            devices:
+                list[str]: A list of device UUIDs hit by the vulnerability.
+            softwareName:
                 str: The name of the software vulnerable.
-                None: No software name provided.
-            softwareVendor=None:
+            softwareVendor:
                 str: The vendor of the software vulnerable.
-                None: No software vendor provided.
 
         returns:
             MDEVulnerability: The Microsoft Defender Vulnerability.
