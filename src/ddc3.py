@@ -89,18 +89,15 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     for devices in device_dict.values():
         for device in devices:
-            if device.tags is None:
-                logger.warning(f"Skipping device {device} since it has no tags")
+            if len(list(filter(is_zzz_tag, device.tags))) > 0:
+                logger.debug(f"{device} already tagged or not inactive, skipping...")
                 continue
 
-            # If it already have the ZZZ tag or it isn't inactive, skip it
-            if (
-                len(list(filter(is_zzz_tag, device.tags))) > 0
-                or device.health != "Inactive"
-            ):
+            if device.health != "Inactive":
+                logger.debug(f"{device} is not inactive ({device.health}), skipping...")
                 continue
 
-            if mde_client.alter_device_tag(device, "ZZZ", "Add"):
+            if mde_client.alter_device_tag(device, "ZZZ", "Add", sleep=0.5):
                 duplicate_devices_tagged += 1
 
     logger.info(

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Literal, Optional
 
 import requests
@@ -98,7 +99,6 @@ class MDEClient:
     def get_devices(
         self,
         odata_filter: str = "(computerDnsName ne null) and (isExcluded eq false)",
-        get_users: bool = False,
     ) -> list[MDEDevice]:
         """
         Gets a list of all devices from Microsoft Defender for Endpoint.
@@ -142,10 +142,10 @@ class MDEClient:
                     devices.append(
                         MDEDevice(
                             new_device_id,
-                            name=payload.get("computerDnsName"),
-                            tags=payload.get("machineTags"),
-                            health=payload.get("health"),
-                            operating_system=payload.get("osPlatform"),
+                            name=payload["computerDnsName"],
+                            tags=payload["machineTags"],
+                            health=payload["healthStatus"],
+                            operating_system=payload["osPlatform"],
                         )
                     )
                 except ValueError:
@@ -182,6 +182,7 @@ class MDEClient:
         device: MDEDevice,
         tag: str,
         action: Literal["Add", "Remove"],
+        sleep: Optional[float] = None
     ) -> Optional[bool]:
         """
         Alters a tag for a given device using Microsoft Defender for Endpoint.
@@ -193,8 +194,8 @@ class MDEClient:
                 str: The tag to alter.
             action:
                 Literal["Add", "Remove"]: The actions to perform.
-            retry=True:
-                bool: True if it should try to fetch request again after 10 seconds if first request fails.
+            sleep=None:
+                Optional[float]: If present, we will sleep for the given amount of seconds after the request.
 
         returns:
             bool: True if it successfully removes the tag otherwise False.
@@ -213,6 +214,9 @@ class MDEClient:
         res.raise_for_status()
 
         logger.info(f'Performed action "{action}" with tag "{tag}" on device {device}.')
+
+        if sleep:
+            time.sleep(sleep)
 
         return True
 
@@ -403,18 +407,18 @@ class MDEDevice:
     """
 
     uuid: str
-    name: Optional[str]
-    health: Optional[str]
-    os: Optional[str]
-    tags: Optional[list[str]]
+    name: str
+    health: str
+    os: str
+    tags: list[str]
 
     def __init__(
         self,
         uuid: str,
-        name: Optional[str] = None,
-        health: Optional[str] = None,
-        operating_system: Optional[str] = None,
-        tags: Optional[list[str]] = None,
+        name: str,
+        health: str,
+        operating_system: str,
+        tags: list[str],
     ):
         """
         Create a new Microsoft Defender for Endpoint device.
@@ -525,16 +529,16 @@ class MDEVulnerability:
     """
 
     cve_id: str
-    devices: Optional[list[str]]
-    description: Optional[str]
+    devices: list[str]
+    description: str
     software_name: Optional[str]
     software_vendor: Optional[str]
 
     def __init__(
         self,
         cve_id: str,
-        devices: Optional[list[str]] = None,
-        description: Optional[str] = None,
+        devices: list[str],
+        description: str,
         software_name: Optional[str] = None,
         software_vendor: Optional[str] = None,
     ):
