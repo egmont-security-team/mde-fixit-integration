@@ -4,6 +4,7 @@ All functions and classes related to Microsoft Defender for Endpoint.
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 import re
 import time
@@ -141,11 +142,12 @@ class MDEClient:
                 try:
                     devices.append(
                         MDEDevice(
-                            new_device_id,
+                            uuid=new_device_id,
                             name=payload["computerDnsName"],
-                            tags=payload["machineTags"],
                             health=payload["healthStatus"],
                             operating_system=payload["osPlatform"],
+                            tags=payload["machineTags"],
+                            first_seen=datetime.fromisoformat(payload["firstSeen"])
                         )
                     )
                 except ValueError:
@@ -411,6 +413,7 @@ class MDEDevice:
     health: str
     os: str
     tags: list[str]
+    first_seen: datetime
 
     def __init__(
         self,
@@ -419,6 +422,7 @@ class MDEDevice:
         health: str,
         operating_system: str,
         tags: list[str],
+        first_seen: datetime,
     ):
         """
         Create a new Microsoft Defender for Endpoint device.
@@ -428,16 +432,14 @@ class MDEDevice:
                 str: The UUID of the Microsoft Defender for Endpoint device.
             name=None:
                 str: The name of the Microsoft Defender for Endpoint device.
-                None: No name is provided.
             health=None:
                 str: The health of the Microsoft Defender for Endpoint device.
-                None: No health status is provided.
             operating_system=None:
                 str: The OS of the Microsoft Defender for Endpoint device.
-                None: No OS is provided.
-            tags=None:
+            tags:
                 list[str]: The tags of the Microsoft Defender for Endpoint device.
-                None: No tags are provided.
+            first_seen:
+                datetime: The first time the device was seen in Microsoft Defender for Endpoint.
 
         returns:
             MDEDevice: The Microsoft Defender for Endpoint device.

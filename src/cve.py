@@ -5,6 +5,7 @@ for devices hit by certain CVE.
 """
 
 import logging
+from datetime import UTC, datetime, timedelta
 import os
 from typing import Any
 
@@ -188,11 +189,20 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 )
                 continue
 
-            if device.should_skip("CVE", cve=cve_id):
+            if not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):
+                logger.debug(
+                    f"Skipping {device} since it has not been in registered for more than 7 days."
+                )
                 continue
 
-            if device.tags is None:
-                logger.warning(f"Skipping {device} since it has no tags.")
+            if device.should_skip("CVE", cve=cve_id):
+                logger.debug(
+                    f"Skipping {device} since its tags indicate it should be skipped for this automation."
+                )
+                continue
+
+            if device.health == "Inactive":
+                logger.debug(f'Skipping {device} since its health is "Inactive".')
                 continue
 
             if any(FixItClient.extract_id(tag) for tag in device.tags):
