@@ -7,6 +7,8 @@ devices by giving them a "ZZZ" tag.
 import logging
 import os
 import re
+from datetime import UTC, datetime, timedelta
+from time import sleep
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
@@ -26,7 +28,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8,14 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=True,
 )
 def ddc3_automation(myTimer: func.TimerRequest) -> None:
@@ -87,8 +89,16 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     duplicate_devices_tagged = 0
 
+    requests_sent = 0
+
+    start = datetime.now(UTC)
+
     for devices in device_dict.values():
         for device in devices:
+            if requests_sent == 1500:
+                logger.info("Sent 1500 requests (API LIMIT) in an hour.. Sleeping for an hour to send more requests.")
+                sleep((start - timedelta(hours=1) - datetime.now(UTC)).total_seconds())
+                
             if len(list(filter(is_zzz_tag, device.tags))) > 0:
                 logger.debug(f"{device} already tagged or not inactive, skipping...")
                 continue
@@ -97,8 +107,13 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
                 logger.debug(f"{device} is not inactive ({device.health}), skipping...")
                 continue
 
-            if mde_client.alter_device_tag(device, "ZZZ", "Add", sleep=0.5):
+            if mde_client.alter_device_tag(device, "ZZZ", "Add", sleep=1):
                 duplicate_devices_tagged += 1
+            requests_sent += 1
+            
+            # Reset time so we don't hit the limit
+            if start + timedelta(hours=1) < datetime.now(UTC):
+                start = datetime.now(UTC)
 
     logger.info(
         f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defender portal."
