@@ -106,7 +106,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         device = next((dev for dev in devices if dev.uuid == device_uuid), None)
 
         if not device:
-            logger.error(
+            logger.warning(
                 f'No device found with UUID="{device_uuid}" for single ticket. Skipping..'
             )
             continue
