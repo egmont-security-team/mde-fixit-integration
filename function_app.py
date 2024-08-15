@@ -12,7 +12,7 @@ if conn := os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
     # integration, logs unwanted and duplicate messages.
     # https://github.com/Azure/azure-functions-python-worker/issues/1342
 
-    # Stop duplicate logs
+    # Stop duplicate logs (other than critical logs)
     logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
         logging.CRITICAL
     )
