@@ -296,7 +296,7 @@ def get_vulnerable_devices(
 
 
 def should_skip_device(device: MDEDevice, cve_id: str) -> bool:
-    if not device.first_seen > (datetime.now(UTC) - timedelta(days=7)):
+    if not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):
         logger.debug(
             f"Skipping {device} since it has not been in registered for more than 7 days."
         )

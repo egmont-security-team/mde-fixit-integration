@@ -91,10 +91,6 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
         if device.should_skip("DDC2"):
             continue
 
-        if device.tags is None:
-            logger.warning(f"Skipping {device} since it has no tags.")
-            continue
-
         for tag in device.tags:
             request_id = FixItClient.extract_id(tag)
 
@@ -103,7 +99,6 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
 
             if request_id not in fetched_requests:
                 request_status = fixit_client.get_request_status(request_id)
-
                 if request_status is None:
                     logger.error("Failed to fetch the status of the FixIt request.")
                     continue

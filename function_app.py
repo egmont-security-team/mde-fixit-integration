@@ -2,12 +2,12 @@ import logging
 import os
 
 import azure.functions as func
-from azure.monitor.opentelemetry import configure_azure_monitor
+# from azure.monitor.opentelemetry import configure_azure_monitor
 
 from src import cve, ddc2, ddc3
 
 if conn := os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
-    configure_azure_monitor(connection_string=conn)
+    # configure_azure_monitor(connection_string=conn)
     # This is a workaround for the issue where the opentelemetry
     # integration, logs unwanted and duplicate messages.
     # https://github.com/Azure/azure-functions-python-worker/issues/1342
