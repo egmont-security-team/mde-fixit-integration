@@ -77,3 +77,10 @@ If a device should not be included in a automation, you can give specific tags i
 - SecurityRecommendation.Read.All
 - AdvancedQuery.Read.All
 - User.Read.All
+
+### Known problem
+
+In Azure, an Azure Function on a Consumption Plan is only allowed to run for 10 minutes.
+This policy is encforced by Azure since a Consumption Plan does not allocated static resources.
+The only way to fix this is by changing the Azure App plan to premium. This cost a lot more
+money (900 DKK/Month) and are therefore not preffered right now.
