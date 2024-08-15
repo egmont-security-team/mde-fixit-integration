@@ -110,13 +110,8 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 f'No device found with UUID="{device_uuid}" for single ticket. Skipping..'
             )
             continue
-        if device.should_skip("CVE", cve=vulnerability.cve_id):
-            continue
-        if device.tags is None:
-            logger.warning(f"Skipping {device} since it has no tags.")
-            continue
-        if any(FixItClient.extract_id(tag) for tag in device.tags):
-            logger.info(f"Skipping {device} because it has a FixIt request tag.")
+        
+        if should_skip_device(device, vulnerability.cve_id):
             continue
 
         users = mde_client.get_device_users(device)
@@ -188,25 +183,8 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                     f'No device found with UUID="{device_uuid}" for multi ticket.'
                 )
                 continue
-
-            if not device.first_seen > (datetime.now(UTC) - timedelta(days=7)):
-                logger.debug(
-                    f"Skipping {device} since it has not been in registered for more than 7 days."
-                )
-                continue
-
-            if device.should_skip("CVE", cve=cve_id):
-                logger.debug(
-                    f"Skipping {device} since its tags indicate it should be skipped for this automation."
-                )
-                continue
-
-            if device.health == "Inactive":
-                logger.debug(f'Skipping {device} since its health is "Inactive".')
-                continue
-
-            if any(FixItClient.extract_id(tag) for tag in device.tags):
-                logger.info(f"Skipping {device} because it has a FixIt request tag.")
+        
+            if should_skip_device(device, cve_id):
                 continue
 
             vulnerable_devices.append(device)
@@ -315,3 +293,27 @@ def get_vulnerable_devices(
                 single_vulnerable_devices[device_uuid] = vulnerability
 
     return (multi_vulnerable_devices, single_vulnerable_devices)
+
+
+def should_skip_device(device: MDEDevice, cve_id: str) -> bool:
+    if not device.first_seen > (datetime.now(UTC) - timedelta(days=7)):
+        logger.debug(
+            f"Skipping {device} since it has not been in registered for more than 7 days."
+        )
+        return True
+
+    if device.should_skip("CVE", cve=cve_id):
+        logger.debug(
+            f"Skipping {device} since its tags indicate it should be skipped for this automation."
+        )
+        return True
+
+    if device.health == "Inactive":
+        logger.debug(f'Skipping {device} since its health is "Inactive".')
+        return True
+
+    if any(FixItClient.extract_id(tag) for tag in device.tags):
+        logger.debug(f"Skipping {device} because it has a FixIt request tag.")
+        return True
+
+    return False
