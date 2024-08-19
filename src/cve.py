@@ -311,6 +311,10 @@ def should_skip_device(device: MDEDevice, cve_id: str) -> bool:
     if device.health == "Inactive":
         logger.debug(f'Skipping {device} since its health is "Inactive".')
         return True
+    
+    if device.onboarding_status != "Onboarded":
+        logger.debug(f'Skipping {device} since its not onboarded yet.')
+        return True
 
     if any(FixItClient.extract_id(tag) for tag in device.tags):
         logger.debug(f"Skipping {device} because it has a FixIt request tag.")
