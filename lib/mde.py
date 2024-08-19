@@ -146,6 +146,7 @@ class MDEClient:
                             name=payload["computerDnsName"],
                             health=payload["healthStatus"],
                             operating_system=payload["osPlatform"],
+                            onboarding_status=payload["onboardingStatus"],
                             tags=payload["machineTags"],
                             first_seen=datetime.fromisoformat(payload["firstSeen"]),
                         )
@@ -414,6 +415,7 @@ class MDEDevice:
     name: str
     health: str
     os: str
+    onboarding_status: str
     tags: list[str]
     first_seen: datetime
 
@@ -423,6 +425,7 @@ class MDEDevice:
         name: str,
         health: str,
         operating_system: str,
+        onboarding_status: str,
         tags: list[str],
         first_seen: datetime,
     ):
@@ -432,12 +435,14 @@ class MDEDevice:
         params:
             uuid:
                 str: The UUID of the Microsoft Defender for Endpoint device.
-            name=None:
+            name:
                 str: The name of the Microsoft Defender for Endpoint device.
-            health=None:
+            health:
                 str: The health of the Microsoft Defender for Endpoint device.
-            operating_system=None:
+            operating_system:
                 str: The OS of the Microsoft Defender for Endpoint device.
+            onboarding_status:
+                str: The onboarding status of the Microsoft Defender for Endpoint device.
             tags:
                 list[str]: The tags of the Microsoft Defender for Endpoint device.
             first_seen:
@@ -450,6 +455,7 @@ class MDEDevice:
         self.name = name
         self.health = health
         self.os = operating_system
+        self.onboarding_status = onboarding_status
         self.tags = tags
         self.first_seen = first_seen
 

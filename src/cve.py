@@ -110,7 +110,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 f'No device found with UUID="{device_uuid}" for single ticket. Skipping..'
             )
             continue
-        
+
         if should_skip_device(device, vulnerability.cve_id):
             continue
 
@@ -183,7 +183,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                     f'No device found with UUID="{device_uuid}" for multi ticket.'
                 )
                 continue
-        
+
             if should_skip_device(device, cve_id):
                 continue
 
@@ -284,7 +284,9 @@ def get_vulnerable_devices(
             continue
 
         if len(vulnerability.devices) >= device_threshold:
-            multi_vulnerable_devices[f"{vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}"] = vulnerability
+            multi_vulnerable_devices[
+                f"{vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}"
+            ] = vulnerability
             continue
 
         for device_uuid in vulnerability.devices:
@@ -310,6 +312,10 @@ def should_skip_device(device: MDEDevice, cve_id: str) -> bool:
 
     if device.health == "Inactive":
         logger.debug(f'Skipping {device} since its health is "Inactive".')
+        return True
+
+    if device.onboarding_status != "Onboarded":
+        logger.debug(f"Skipping {device} since its not onboarded yet.")
         return True
 
     if any(FixItClient.extract_id(tag) for tag in device.tags):
