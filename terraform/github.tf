@@ -30,13 +30,13 @@ resource "github_repository_environment" "stag" {
 resource "github_actions_secret" "azure_client_id" {
   repository      = github_repository.repo.name
   secret_name     = "AZURE_CLIENT_ID"
-  plaintext_value = azurerm_user_assigned_identity.deployment-mi.client_id
+  plaintext_value = azurerm_user_assigned_identity.deployment_mi.client_id
 }
 
 resource "github_actions_secret" "azure_subscription_id" {
   repository      = github_repository.repo.name
   secret_name     = "AZURE_SUBSCRIPTION_ID"
-  plaintext_value = azurerm_user_assigned_identity.deployment-mi.client_id
+  plaintext_value = data.azurerm_subscription.current.subscription_id
 }
 
 resource "github_actions_secret" "azure_tenant_id" {

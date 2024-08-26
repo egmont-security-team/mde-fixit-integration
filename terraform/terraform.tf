@@ -12,7 +12,7 @@ terraform {
 
   backend "azurerm" {
     resource_group_name  = "mde-fixit-integration-tfstate"
-    storage_account_name = "tfstate2q6qx"
+    storage_account_name = "tfstate2x8aa"
     container_name       = "tfstate-deploy"
     key                  = "terraform.tfstate"
   }
@@ -30,5 +30,6 @@ provider "github" {
 
 locals {
   location            = "West Europe"
+  github_organization = "egmont-security-team"
   repository_name     = "mde-fixit-integration"
 }

@@ -1,4 +1,4 @@
-resource "random_string" "state-resource-code" {
+resource "random_string" "fastate_resource_code" {
   length  = 5
   special = false
   upper   = false
@@ -7,74 +7,102 @@ resource "random_string" "state-resource-code" {
 resource "azurerm_resource_group" "app" {
   name     = "${local.repository_name}-app"
   location = local.location
-}
 
-resource "azurerm_storage_account" "function-app-state" {
-  name                     = "functionappstate${random_string.resource_code.result}"
-  resource_group_name      = azurerm_resource_group.app.name
-  location                 = azurerm_resource_group.app.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-}
-
-resource "azurerm_app_service_plan" "function-app-service-plan" {
-  name                = "${local.repository_name}-appserviceplan"
-  location            = azurerm_resource_group.example.location
-  resource_group_name = azurerm_resource_group.example.name
-
-  sku {
-    tier = "Standard"
-    size = "S1"
+  tags = {
+    "service_level"        = "24-7"
+    "sub_cost_center_code" = "DAE-1041-03"
   }
 }
 
-resource "azurerm_function_app" "app" {
-  name                       = "${local.repository_name}-functionapp"
-  location                   = azurerm_resource_group.app.location
-  resource_group_name        = azurerm_resource_group.app.name
-  app_service_plan_id        = azurerm_app_service_plan.function-app-service-plan.id
-  storage_account_name       = azurerm_storage_account.function-app-state.name
-  storage_account_access_key = azurerm_storage_account.function-app-state.primary_access_key
+resource "azurerm_storage_account" "app_state" {
+  name                = "fastate${random_string.fastate_resource_code.result}"
+  resource_group_name = azurerm_resource_group.app.name
+  location            = azurerm_resource_group.app.location
+
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  tags = {
+    "service_level" = "24-7"
+  }
+}
+
+resource "azurerm_service_plan" "plan" {
+  name                = "${local.repository_name}-sp"
+  location            = azurerm_resource_group.app.location
+  resource_group_name = azurerm_resource_group.app.name
+
+  os_type  = "Linux"
+  sku_name = "Y1"
+
+  tags = {
+    "service_level" = "24-7"
+  }
+}
+
+resource "azurerm_linux_function_app" "app" {
+  name                = "${local.repository_name}-fa"
+  location            = azurerm_resource_group.app.location
+  resource_group_name = azurerm_resource_group.app.name
+
+  service_plan_id            = azurerm_service_plan.plan.id
+  storage_account_name       = azurerm_storage_account.app_state.name
+  storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
+
+  site_config {
+    application_insights_connection_string = azurerm_application_insights.app_logging.instrumentation_key
+  }
 
   identity {
     type = "UserAssigned"
     identity_ids = [
-      azurerm_user_assigned_identity.app-mi.id
+      azurerm_user_assigned_identity.app_mi.id
     ]
   }
 
   app_settings = {
-    "APPLICATIONINSIGHTS_CONNECTION_STRING" : "TODO",
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-prod01",
     "CVE_DEVICE_THRESHOLD" : 20
   }
+
+  tags = {
+    "service_level" = "24-7"
+  }
 }
 
-resource "azurerm_function_app_slot" "stag-slot" {
+resource "azurerm_linux_function_app_slot" "stag" {
   name                       = "stag"
-  location                   = azurerm_resource_group.app.location
-  resource_group_name        = azurerm_resource_group.app.name
-  app_service_plan_id        = azurerm_app_service_plan.function-app-service-plan.id
-  function_app_name          = azurerm_function_app.app.name
-  storage_account_name       = azurerm_storage_account.function-app-state.name
-  storage_account_access_key = azurerm_storage_account.function-app-state.primary_access_key
+  function_app_id            = azurerm_linux_function_app.app.id
+  storage_account_name       = azurerm_storage_account.app_state.name
+  storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
+
+  site_config {
+    application_insights_connection_string = azurerm_application_insights.app_logging.instrumentation_key
+  }
 
   identity {
     type = "UserAssigned"
     identity_ids = [
-      azurerm_user_assigned_identity.app-mi.id
+      azurerm_user_assigned_identity.app_mi.id
     ]
   }
 
   app_settings = {
-    "APPLICATIONINSIGHTS_CONNECTION_STRING" : "TODO",
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-stag01",
     "CVE_DEVICE_THRESHOLD" : 5
   }
+
+  tags = {
+    "service_level" = "24-7"
+  }
 }
 
-resource "azurerm_user_assigned_identity" "app-mi" {
+resource "azurerm_user_assigned_identity" "app_mi" {
   name                = "${local.repository_name}-app-mi"
   resource_group_name = azurerm_resource_group.app.name
   location            = azurerm_resource_group.app.location
+
+  tags = {
+    "service_level" = "24-7"
+  }
 }
