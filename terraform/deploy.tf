@@ -2,9 +2,10 @@ resource "azurerm_resource_group" "deployment" {
   name     = "${local.repository_name}-deployment"
   location = local.location
 
-  tags = {
-    "service_level"        = "24-7"
-    "sub_cost_center_code" = "DAE-1041-03"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
@@ -13,8 +14,10 @@ resource "azurerm_user_assigned_identity" "deployment_mi" {
   resource_group_name = azurerm_resource_group.deployment.name
   location            = azurerm_resource_group.deployment.location
 
-  tags = {
-    "service_level" = "24-7"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 

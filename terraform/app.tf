@@ -8,9 +8,10 @@ resource "azurerm_resource_group" "app" {
   name     = "${local.repository_name}-app"
   location = local.location
 
-  tags = {
-    "service_level"        = "24-7"
-    "sub_cost_center_code" = "DAE-1041-03"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
@@ -22,8 +23,10 @@ resource "azurerm_storage_account" "app_state" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
 
-  tags = {
-    "service_level" = "24-7"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
@@ -35,8 +38,10 @@ resource "azurerm_service_plan" "plan" {
   os_type  = "Linux"
   sku_name = "Y1"
 
-  tags = {
-    "service_level" = "24-7"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
@@ -65,8 +70,10 @@ resource "azurerm_linux_function_app" "app" {
     "CVE_DEVICE_THRESHOLD" : 20
   }
 
-  tags = {
-    "service_level" = "24-7"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
@@ -92,8 +99,10 @@ resource "azurerm_linux_function_app_slot" "stag" {
     "CVE_DEVICE_THRESHOLD" : 5
   }
 
-  tags = {
-    "service_level" = "24-7"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
@@ -102,7 +111,9 @@ resource "azurerm_user_assigned_identity" "app_mi" {
   resource_group_name = azurerm_resource_group.app.name
   location            = azurerm_resource_group.app.location
 
-  tags = {
-    "service_level" = "24-7"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }

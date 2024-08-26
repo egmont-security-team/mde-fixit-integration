@@ -4,7 +4,9 @@ resource "azurerm_application_insights" "app_logging" {
   resource_group_name = azurerm_resource_group.app.name
   application_type    = "web"
 
-  tags = {
-    "service_level"        = "24-7"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }

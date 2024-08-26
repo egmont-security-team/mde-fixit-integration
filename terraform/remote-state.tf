@@ -8,9 +8,10 @@ resource "azurerm_resource_group" "tfstate" {
   name     = "${local.repository_name}-tfstate"
   location = local.location
 
-  tags = {
-    "service_level"        = "24-7"
-    "sub_cost_center_code" = "DAE-1041-03"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
@@ -22,8 +23,10 @@ resource "azurerm_storage_account" "tfstate" {
   account_replication_type        = "LRS"
   allow_nested_items_to_be_public = false
 
-  tags = {
-    "service_level" = "24-7"
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
   }
 }
 
