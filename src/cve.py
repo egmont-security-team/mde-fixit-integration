@@ -160,7 +160,7 @@ def proccess_single_devices(
         if len(recommendations) == 0:
             request_config["team"] = os.environ["FIXIT_SEC_TEAM_ID"]
         elif device.is_server():
-            os.environ["FIXIT_CLOUD_TEAM_ID"]
+            request_config["team"] = os.environ["FIXIT_CLOUD_TEAM_ID"]
         else:
             request_config["team"] = os.environ["FIXIT_SD_TEAM_ID"]
 
@@ -245,7 +245,7 @@ def proccess_multiple_devices(
 
         request_config: dict[str, Any] = {
             "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
-            "team": os.environ["FIXIT_EUX_TEAM_ID"],
+            "team": os.environ["FIXIT_MW_TEAM_ID"],
             "template_id": os.environ["FIXIT_MULTI_TEMPLATE_ID"],
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},

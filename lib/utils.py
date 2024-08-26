@@ -39,6 +39,15 @@ def get_secret(
 
 
 def create_environment(key_vault_name: str, credential: DefaultAzureCredential) -> None:
+    """
+    Create the environment variables from the secrets in the key vault. 
+
+    params:
+        key_vault_name:
+            str: The name of the key vault.
+        credential:
+            DefaultAzureCredential: The credential to authenticate with the key vault.
+    """
     sc = SecretClient(
         vault_url=f"https://{key_vault_name}.vault.azure.net",
         credential=credential,
