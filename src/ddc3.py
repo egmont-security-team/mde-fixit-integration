@@ -12,10 +12,9 @@ from time import sleep
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 
 from lib.mde import MDEClient, MDEDevice
-from lib.utils import get_secret
+from lib.utils import create_environment
 
 DeviceDict = dict[str, list[MDEDevice]]
 
@@ -59,17 +58,13 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
         )
         return
 
-    secret_client = SecretClient(
-        vault_url=f"https://{key_vault_name}.vault.azure.net",
-        credential=DefaultAzureCredential(),
+    create_environment(key_vault_name, DefaultAzureCredential())
+
+    mde_client = MDEClient(
+        os.environ["AZURE_MDE_TENANT"],
+        os.environ["AZURE_MDE_CLIENT_ID"],
+        os.environ["AZURE_MDE_SECRET_VALUE"],
     )
-
-    # Microsoft Defender for Endpoint secrets
-    MDE_TENANT = get_secret(secret_client, "Azure-MDE-Tenant")
-    MDE_CLIENT_ID = get_secret(secret_client, "Azure-MDE-Client-ID")
-    MDE_SECRET_VALUE = get_secret(secret_client, "Azure-MDE-Secret-Value")
-
-    mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
 
     # SETUP - end
 
@@ -96,9 +91,11 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     for devices in device_dict.values():
         for device in devices:
             if requests_sent == 1500:
-                logger.info("Sent 1500 requests (API LIMIT) in an hour.. Sleeping for an hour to send more requests.")
+                logger.info(
+                    "Sent 1500 requests (API LIMIT) in an hour.. Sleeping for an hour to send more requests."
+                )
                 sleep((start - timedelta(hours=1) - datetime.now(UTC)).total_seconds())
-                
+
             if len(list(filter(is_zzz_tag, device.tags))) > 0:
                 logger.debug(f"{device} already tagged or not inactive, skipping...")
                 continue
@@ -110,7 +107,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
             if mde_client.alter_device_tag(device, "ZZZ", "Add", sleep=1):
                 duplicate_devices_tagged += 1
             requests_sent += 1
-            
+
             # Reset time so we don't hit the limit
             if start + timedelta(hours=1) < datetime.now(UTC):
                 start = datetime.now(UTC)

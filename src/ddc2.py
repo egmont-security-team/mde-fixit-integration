@@ -9,11 +9,10 @@ import os
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 
 from lib.fixit import FixItClient
 from lib.mde import MDEClient
-from lib.utils import get_secret
+from lib.utils import create_environment
 
 logger = logging.getLogger(__name__)
 
@@ -54,23 +53,18 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
         )
         return
 
-    secret_client = SecretClient(
-        vault_url=f"https://{key_vault_name}.vault.azure.net",
-        credential=DefaultAzureCredential(),
+    create_environment(key_vault_name, DefaultAzureCredential())
+
+    mde_client = MDEClient(
+        os.environ["AZURE_MDE_TENANT"],
+        os.environ["AZURE_MDE_CLIENT_ID"],
+        os.environ["AZURE_MDE_SECRET_VALUE"],
     )
-
-    # MDE secrets
-    MDE_TENANT = get_secret(secret_client, "Azure-MDE-Tenant")
-    MDE_CLIENT_ID = get_secret(secret_client, "Azure-MDE-Client-ID")
-    MDE_SECRET_VALUE = get_secret(secret_client, "Azure-MDE-Secret-Value")
-
-    # FixIt secrets
-    FIXIT_4ME_ACCOUNT = get_secret(secret_client, "FixIt-4Me-Account")
-    FIXIT_4ME_BASE_URL = get_secret(secret_client, "FixIt-4Me-Base-URL")
-    FIXIT_4ME_API_KEY = get_secret(secret_client, "FixIt-4Me-API-Key")
-
-    mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
-    fixit_client = FixItClient(FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY)
+    fixit_client = FixItClient(
+        os.environ["FIXIT_4ME_BASE_URL"],
+        os.environ["FIXIT_4ME_ACCOUNT"],
+        os.environ["FIXIT_4ME_API_KEY"],
+    )
 
     # SETUP - end
 

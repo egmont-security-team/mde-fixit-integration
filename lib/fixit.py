@@ -68,7 +68,7 @@ class FixItClient:
         # If this regular expression does not match, it is not a FixIt tag.
         # This also takes care of human error by checking for spaces between
         # the "#" and the numbers
-        if not re.match(r"^#( )*[0-9]+$", string):
+        if not re.fullmatch(r"^#( )*[0-9]+$", string):
             return None
 
         # This removes the "#" and optional spaces from the tag.

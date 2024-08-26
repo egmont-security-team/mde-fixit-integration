@@ -7,15 +7,14 @@ for devices hit by certain CVE.
 import logging
 from datetime import UTC, datetime, timedelta
 import os
-from typing import Any
+from typing import Any, Optional
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 
 from lib.fixit import FixItClient
 from lib.mde import MDEClient, MDEDevice, MDEVulnerability
-from lib.utils import get_secret
+from lib.utils import create_environment
 
 logger = logging.getLogger(__name__)
 
@@ -56,30 +55,18 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         )
         return
 
-    secret_client = SecretClient(
-        vault_url=f"https://{key_vault_name}.vault.azure.net",
-        credential=DefaultAzureCredential(),
+    create_environment(key_vault_name, DefaultAzureCredential())
+
+    mde_client = MDEClient(
+        os.environ["AZURE_MDE_TENANT"],
+        os.environ["AZURE_MDE_CLIENT_ID"],
+        os.environ["AZURE_MDE_SECRET_VALUE"],
     )
-
-    # MDE secrets
-    MDE_TENANT = get_secret(secret_client, "Azure-MDE-Tenant")
-    MDE_CLIENT_ID = get_secret(secret_client, "Azure-MDE-Client-ID")
-    MDE_SECRET_VALUE = get_secret(secret_client, "Azure-MDE-Secret-Value")
-
-    # FixIt secrets
-    FIXIT_4ME_BASE_URL = get_secret(secret_client, "FixIt-4Me-Base-URL")
-    FIXIT_4ME_ACCOUNT = get_secret(secret_client, "FixIt-4Me-Account")
-    FIXIT_4ME_API_KEY = get_secret(secret_client, "FixIt-4Me-API-Key")
-
-    FIXIT_SINGLE_TEMPLATE_ID = get_secret(secret_client, "CVE-Single-FixIt-Template-ID")
-    FIXIT_MULTI_TEMPLATE_ID = get_secret(secret_client, "CVE-Multi-FixIt-Template-ID")
-    FIXIT_SERVICE_INSTANCE_ID = get_secret(secret_client, "CVE-Service-Instance-ID")
-    FIXIT_SD_TEAM_ID = get_secret(secret_client, "CVE-SD-Team-ID")
-    FIXIT_EUX_TEAM_ID = get_secret(secret_client, "CVE-EUX-Team-ID")
-    FIXIT_SEC_TEAM_ID = get_secret(secret_client, "CVE-SEC-Team-ID")
-
-    mde_client = MDEClient(MDE_TENANT, MDE_CLIENT_ID, MDE_SECRET_VALUE)
-    fixit_client = FixItClient(FIXIT_4ME_BASE_URL, FIXIT_4ME_ACCOUNT, FIXIT_4ME_API_KEY)
+    fixit_client = FixItClient(
+        os.environ["FIXIT_4ME_BASE_URL"],
+        os.environ["FIXIT_4ME_ACCOUNT"],
+        os.environ["FIXIT_4ME_API_KEY"],
+    )
 
     # SETUP - end
 
@@ -99,7 +86,35 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         vulnerabilities
     )
 
-    multi_fixit_tickets: int = 0
+    single_fixit_tickets = proccess_single_devices(
+        single_vulnerable_devices, devices, mde_client, fixit_client
+    )
+    multi_fixit_tickets = proccess_multiple_devices(
+        multi_vulnerable_devices, devices, mde_client, fixit_client
+    )
+
+    total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
+
+    logger.info(
+        f"Created a total of {total_fixit_tickets} FixIt-tickets (multi={multi_fixit_tickets}, single={single_fixit_tickets})"
+    )
+
+
+def proccess_single_devices(
+    single_vulnerable_devices: dict[str, MDEVulnerability],
+    devices: list[MDEDevice],
+    mde_client: MDEClient,
+    fixit_client: FixItClient,
+    FIXIT_SINGLE_TEMPLATE_ID: Optional[str] = None,
+) -> int:
+    """
+    Processes the single vulnerable devices and creates FixIt tickets for them.
+
+    params:
+        single_vulnerable_devices:
+            dict[str, MDEVulnerability]: The single vulnerable devices.
+            The key is the device UUID and the value is the vulnerability.
+    """
     single_fixit_tickets: int = 0
 
     for device_uuid, vulnerability in single_vulnerable_devices.items():
@@ -125,7 +140,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         )
 
         request_config: dict[str, Any] = {
-            "service_instance_id": FIXIT_SERVICE_INSTANCE_ID,
+            "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
             "template_id": FIXIT_SINGLE_TEMPLATE_ID,
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},
@@ -143,12 +158,14 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         }
 
         if len(recommendations) == 0:
-            request_config["team"] = FIXIT_SEC_TEAM_ID
+            request_config["team"] = os.environ["FIXIT_SEC_TEAM_ID"]
+        elif device.is_server():
+            os.environ["FIXIT_CLOUD_TEAM_ID"]
         else:
-            request_config["team"] = FIXIT_SD_TEAM_ID
+            request_config["team"] = os.environ["FIXIT_SD_TEAM_ID"]
 
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cve_id}]: Single Vulnerable Device",
+            f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Single Vulnerable Device",
             **request_config,
         )
 
@@ -165,6 +182,34 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
             logger.error(
                 f'Created single FixIt ticket "#{fixit_id}" but failed to give {device} a tag.'
             )
+
+    return single_fixit_tickets
+
+
+def proccess_multiple_devices(
+    multi_vulnerable_devices: dict[str, MDEVulnerability],
+    devices: list[MDEDevice],
+    mde_client: MDEClient,
+    fixit_client: FixItClient,
+) -> int:
+    """
+    Processes the multi vulnerable devices and creates FixIt tickets for them.
+
+    params:
+        multi_vulnerable_devices:
+            dict[str, MDEVulnerability]: The multi vulnerable devices.
+                The key is the vulnerability CVE ID and the value is the vulnerability.
+            devices:
+                list[MDEDevice]: The list of all devices.
+            mde_client:
+                MDEClient: The MDE client to interact with the MDE API.
+            fixit_client:
+                FixItClient: The FixIt client to interact with the FixIt API.
+
+    returns:
+        int: The amount of FixIt tickets created.
+    """
+    multi_fixit_tickets: int = 0
 
     for cve_id, vulnerability in multi_vulnerable_devices.items():
         vulnerable_devices = []
@@ -184,7 +229,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                 )
                 continue
 
-            if should_skip_device(device, cve_id):
+            if should_skip_device(device, cve_id, check_fixit_request=False):
                 continue
 
             vulnerable_devices.append(device)
@@ -199,9 +244,9 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         device_count = str(len(vulnerable_devices))
 
         request_config: dict[str, Any] = {
-            "service_instance_id": FIXIT_SERVICE_INSTANCE_ID,
-            "team": FIXIT_EUX_TEAM_ID,
-            "template_id": FIXIT_MULTI_TEMPLATE_ID,
+            "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
+            "team": os.environ["FIXIT_EUX_TEAM_ID"],
+            "template_id": os.environ["FIXIT_MULTI_TEMPLATE_ID"],
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},
                 {"id": "cve_id", "value": vulnerability.cve_id},
@@ -213,7 +258,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         }
 
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cve_id}]: Multiple Vulnerable Devices",
+            f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",
             **request_config,
         )
 
@@ -232,11 +277,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
                     f'Created multi FixIt ticket "#{fixit_id}" but failed to give {device} devices a tag.'
                 )
 
-    total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
-
-    logger.info(
-        f"Created a total of {total_fixit_tickets} FixIt-tickets (multi={multi_fixit_tickets}, single={single_fixit_tickets})"
-    )
+    return multi_fixit_tickets
 
 
 def get_vulnerable_devices(
@@ -248,11 +289,11 @@ def get_vulnerable_devices(
     """
     Returns a tuple containing all the vulnerable devices.
 
-    The first element is a list of multi vulnerabilities. This is vulnerabilities that have
+    The first element is a dict of multi vulnerabilities. This is vulnerabilities that have
     a lot of devices that are vulnerable, therefore they should be handled as a group.
     The key is the UUID of the vulnerability and the value is the vulnerability itself.
 
-    The second element is a list of single vulnerabilities. They all have few vulnerable devices,
+    The second element is a dict of single vulnerabilities. They all have few vulnerable devices,
     therefor they should be handled individually. The key is the device UUID and the value is
     the vulnerability
 
@@ -297,32 +338,60 @@ def get_vulnerable_devices(
     return (multi_vulnerable_devices, single_vulnerable_devices)
 
 
-def should_skip_device(device: MDEDevice, cve_id: str) -> bool:
-    if not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):
+def should_skip_device(
+    device: MDEDevice,
+    cve_id: str,
+    check_first_seen: bool = True,
+    check_should_skip: bool = True,
+    check_health: bool = True,
+    check_onboarding_status: bool = True,
+    check_fixit_request: bool = True,
+) -> bool:
+    """
+    Checks if a device should be skipped for the CVE automation.
+
+    params:
+        device:
+            MDEDevice: The device to check.
+        cve_id:
+            str: The CVE ID to check against.
+        check_first_seen:
+            bool: If the device should be checked for first seen.
+        check_should_skip:
+            bool: If the device should be checked for tags that indicate it should be skipped.
+        check_health:
+            bool: If the device should be checked for health status.
+        check_onboarding_status:
+            bool: If the device should be checked for onboarding status.
+        check_fixit_request:
+            bool: If the device should be checked for FixIt requests tags.
+
+    returns:
+        bool: If the device should be skipped.
+    """
+    if check_first_seen and not device.first_seen < (
+        datetime.now(UTC) - timedelta(days=7)
+    ):
         logger.debug(
             f"Skipping {device} since it has not been in registered for more than 7 days."
         )
         return True
 
-    if device.should_skip("CVE", cve=cve_id):
+    if check_should_skip and device.should_skip("CVE", cve=cve_id):
         logger.debug(
             f"Skipping {device} since its tags indicate it should be skipped for this automation."
         )
         return True
 
-    if device.health == "Inactive":
+    if check_health and device.health == "Inactive":
         logger.debug(f'Skipping {device} since its health is "Inactive".')
         return True
-    
-    if device.onboarding_status != "Onboarded":
-        logger.debug(f'Skipping {device} since its not onboarded yet.')
-        return True
 
-    if device.onboarding_status != "Onboarded":
+    if check_onboarding_status and device.onboarding_status != "Onboarded":
         logger.debug(f"Skipping {device} since its not onboarded yet.")
         return True
 
-    if any(FixItClient.extract_id(tag) for tag in device.tags):
+    if check_fixit_request and any(FixItClient.extract_id(tag) for tag in device.tags):
         logger.debug(f"Skipping {device} because it has a FixIt request tag.")
         return True
 

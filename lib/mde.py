@@ -249,14 +249,14 @@ class MDEClient:
         | join kind=inner (
             DeviceTvmSoftwareVulnerabilitiesKB
             | where PublishedDate <= datetime_add('day', -25, now())
-            | project CveId, VulnerabilityDescription
+            | project CveId, VulnerabilityDescription, CvssScore
         ) on CveId
         | join kind=inner (
             DeviceInfo
             | summarize arg_max(Timestamp, *) by DeviceId
             | project DeviceId
         ) on DeviceId
-        | summarize Devices = make_set(DeviceId) by CveId, SoftwareName, SoftwareVendor, VulnerabilityDescription
+        | summarize Devices = make_set(DeviceId) by CveId, SoftwareName, SoftwareVendor, VulnerabilityDescription, CvssScore
         """
 
         cve_url = "https://api.securitycenter.microsoft.com/api/advancedqueries/run"
@@ -283,6 +283,7 @@ class MDEClient:
                     vulnerabilities.append(
                         MDEVulnerability(
                             cve_id=payload["CveId"],
+                            cve_score=payload["CvssScore"],
                             devices=payload["Devices"],
                             description=payload["VulnerabilityDescription"],
                             software_name=payload["SoftwareName"],
@@ -479,6 +480,15 @@ class MDEDevice:
         """
         return not self.__eq__(other)
 
+    def is_server(self) -> bool:
+        """
+        Returns if the device is a server or not.
+
+        returns:
+            bool: True if the device is a server.
+        """
+        return "server" in self.os.lower()
+
     def should_skip(
         self, automation: Literal["DDC2", "DDC3", "CVE"], cve: None | str = None
     ) -> bool:
@@ -540,6 +550,7 @@ class MDEVulnerability:
     """
 
     cve_id: str
+    cve_score: int
     devices: list[str]
     description: str
     software_name: str
@@ -548,6 +559,7 @@ class MDEVulnerability:
     def __init__(
         self,
         cve_id: str,
+        cve_score: int,
         devices: list[str],
         description: str,
         software_name: str,
@@ -559,6 +571,8 @@ class MDEVulnerability:
         params:
             cve_id:
                 str: The UUID of the Microsoft Defender for Endpoint vulnerability.
+            csv_score:
+                int: The score of the vulnerability.
             description:
                 str: The vulnerability description.
             devices:
@@ -572,10 +586,20 @@ class MDEVulnerability:
             MDEVulnerability: The Microsoft Defender Vulnerability.
         """
         self.cve_id = cve_id
+        self.cve_score = cve_score
         self.description = description
         self.devices = devices
         self.software_name = software_name
         self.software_vendor = software_vendor
+
+    def is_sever_software(self) -> bool:
+        """
+        Returns if the software is a server software or not.
+
+        returns:
+            bool: True if the software is a server software.
+        """
+        return "server" in self.software_name.lower()
 
     def __str__(self):
         """
