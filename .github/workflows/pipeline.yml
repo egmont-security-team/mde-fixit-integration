@@ -23,7 +23,7 @@ jobs:
     needs: [prepare]
     secrets: inherit
     with:
-      PYTHON_VERSION: "3.11"
+      PYTHON_VERSION: "3.11.9"
 
   deploy:
     uses: "./.github/workflows/deploy.yml"

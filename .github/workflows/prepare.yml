@@ -4,7 +4,7 @@ on:
   workflow_call:
     outputs:
       DEPLOY_ENV:
-        description: What kind of deployment this is
+        description: Deployment environment 
         value: ${{ jobs.prepare-pipeline.outputs.DEPLOY_ENV }}
       
 jobs:
@@ -24,11 +24,11 @@ jobs:
             BRANCH: ${{ github.ref_name }}
           run: |
             if [[ $BRANCH == "main" || $BRANCH == "master" ]]; then
-                DEPLOY_ENV=Production
+                DEPLOY_ENV="prod"
             elif [[ $BRANCH == "staging" ]]; then
-                DEPLOY_ENV=Staging
+                DEPLOY_ENV="stag"
             else
-                DEPLOY_ENV=Development
+                DEPLOY_ENV="dev"
             fi
             echo "DEPLOY_ENV=$DEPLOY_ENV"
             echo "DEPLOY_ENV=$DEPLOY_ENV" >> $GITHUB_OUTPUT

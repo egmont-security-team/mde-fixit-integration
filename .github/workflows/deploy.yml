@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       DEPLOY_ENV:
-        description: The environment to deploy to
+        description: Deployment environment
         required: true
         type: string
 
@@ -15,7 +15,7 @@ jobs:
   deploy-to-azure:
     runs-on: ubuntu-latest
 
-    if: inputs.DEPLOY_ENV == 'Production' || inputs.DEPLOY_ENV == 'Staging'
+    if: inputs.DEPLOY_ENV == 'prod' || inputs.DEPLOY_ENV == 'stag'
 
     environment: ${{ inputs.DEPLOY_ENV }}
 
@@ -37,9 +37,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
