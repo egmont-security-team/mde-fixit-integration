@@ -22,7 +22,7 @@ resource "azurerm_user_assigned_identity" "deployment_mi" {
 }
 
 resource "azurerm_role_assignment" "deployment_mi_contributor" {
-  scope                = data.azurerm_subscription.current.id
+  scope                = azurerm_resource_group.app.id
   role_definition_name = "Contributor"
   principal_id         = azurerm_user_assigned_identity.deployment_mi.principal_id
 }
