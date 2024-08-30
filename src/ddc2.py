@@ -68,7 +68,9 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
 
     # SETUP - end
 
-    devices = mde_client.get_devices(odata_filter="(computerDnsName ne null) and (isExcluded eq false)")
+    devices = mde_client.get_devices(
+        odata_filter="(computerDnsName ne null) and (isExcluded eq false)"
+    )
     if not devices:
         logger.info("Task won't continue as there is no devices to process.")
         return
@@ -94,7 +96,9 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
             if request_id not in fetched_requests:
                 request_status = fixit_client.get_request_status(request_id)
                 if request_status is None:
-                    logger.error(f"Failed to fetch the status of the FixIt request for {device}.")
+                    logger.error(
+                        f"Failed to fetch the status of the FixIt request for {device}."
+                    )
                     continue
 
                 fetched_requests[request_id] = request_status

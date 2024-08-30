@@ -117,7 +117,9 @@ class MDEClient:
         devices: list[MDEDevice] = []
 
         odata_filter = f"?$filter={odata_filter}" or ""
-        devices_url = f"https://api.securitycenter.microsoft.com/api/machines{odata_filter}"
+        devices_url = (
+            f"https://api.securitycenter.microsoft.com/api/machines{odata_filter}"
+        )
 
         while devices_url:
             res = requests.get(

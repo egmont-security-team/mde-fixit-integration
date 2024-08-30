@@ -68,7 +68,9 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     # SETUP - end
 
-    devices = mde_client.get_devices(odata_filter="(computerDnsName ne null) and (isExcluded eq false)")
+    devices = mde_client.get_devices(
+        odata_filter="(computerDnsName ne null) and (isExcluded eq false)"
+    )
     if not devices:
         logger.info("Task won't continue as there is no devices to process.")
         return

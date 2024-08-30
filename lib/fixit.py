@@ -156,9 +156,7 @@ class FixItClient:
         returns:
             str: The JSON response of the created request.
         """
-        payload = {
-            "subject": subject
-        }
+        payload = {"subject": subject}
 
         payload.update(kwargs)
 

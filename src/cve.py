@@ -70,7 +70,9 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     # SETUP - end
 
-    devices: list[MDEDevice] = mde_client.get_devices(odata_filter="(computerDnsName ne null) and (isExcluded eq false)")
+    devices: list[MDEDevice] = mde_client.get_devices(
+        odata_filter="(computerDnsName ne null) and (isExcluded eq false)"
+    )
     if not devices:
         logger.critical("Task won't continue as there is no devices to process.")
         return

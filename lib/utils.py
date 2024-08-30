@@ -40,7 +40,7 @@ def get_secret(
 
 def create_environment(key_vault_name: str, credential: DefaultAzureCredential) -> None:
     """
-    Create the environment variables from the secrets in the key vault. 
+    Create the environment variables from the secrets in the key vault.
 
     params:
         key_vault_name:
