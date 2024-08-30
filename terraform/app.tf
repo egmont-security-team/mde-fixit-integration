@@ -55,7 +55,7 @@ resource "azurerm_linux_function_app" "app" {
   storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
 
   site_config {
-    application_insights_connection_string = azurerm_application_insights.app_logging.instrumentation_key
+    application_insights_connection_string = azurerm_application_insights.app_logging.connection_string
   }
 
   identity {
