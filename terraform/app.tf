@@ -54,6 +54,14 @@ resource "azurerm_linux_function_app" "app" {
   storage_account_name       = azurerm_storage_account.app_state.name
   storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
 
+  storage_account {
+    access_key   = azurerm_storage_account.app_state.primary_access_key
+    account_name = azurerm_storage_account.app_state.name
+    name         = azurerm_storage_account.app_state.name
+    type         = "AzureFiles"
+    share_name   = "app-state"
+  }
+
   site_config {
     application_insights_connection_string = azurerm_application_insights.app_logging.connection_string
   }
@@ -66,10 +74,11 @@ resource "azurerm_linux_function_app" "app" {
   }
 
   app_settings = {
-    "AZURE_FUNCTIONS_ENVIRONMENT": "Production",
-    "FUNCTIONS_WORKER_RUNTIME": "python",
-    "SCM_DO_BUILD_DURING_DEPLOYMENT": 1,
-    "ENABLE_ORYX_BUILD": 1,
+    "WEBSITE_ENABLE_SYNC_UPDATE_SITE": "true",
+    "AZURE_FUNCTIONS_ENVIRONMENT" : "Production",
+    "FUNCTIONS_WORKER_RUNTIME" : "python",
+    "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
+    "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-prod01",
     "CVE_DEVICE_THRESHOLD" : 20
   }
@@ -87,6 +96,14 @@ resource "azurerm_linux_function_app_slot" "stag" {
   storage_account_name       = azurerm_storage_account.app_state.name
   storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
 
+  storage_account {
+    access_key   = azurerm_storage_account.app_state.primary_access_key
+    account_name = azurerm_storage_account.app_state.name
+    name         = azurerm_storage_account.app_state.name
+    type         = "AzureFiles"
+    share_name   = "app-state"
+  }
+
   site_config {
     application_insights_connection_string = azurerm_application_insights.app_logging.instrumentation_key
   }
@@ -99,10 +116,11 @@ resource "azurerm_linux_function_app_slot" "stag" {
   }
 
   app_settings = {
-    "AZURE_FUNCTIONS_ENVIRONMENT": "Staging",
-    "FUNCTIONS_WORKER_RUNTIME": "python",
-    "SCM_DO_BUILD_DURING_DEPLOYMENT": 1,
-    "ENABLE_ORYX_BUILD": 1,
+    "WEBSITE_ENABLE_SYNC_UPDATE_SITE": "true",
+    "AZURE_FUNCTIONS_ENVIRONMENT" : "Staging",
+    "FUNCTIONS_WORKER_RUNTIME" : "python",
+    "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
+    "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-stag01",
     "CVE_DEVICE_THRESHOLD" : 5
   }
