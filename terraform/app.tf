@@ -66,6 +66,10 @@ resource "azurerm_linux_function_app" "app" {
   }
 
   app_settings = {
+    "AZURE_FUNCTIONS_ENVIRONMENT": "Production",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "SCM_DO_BUILD_DURING_DEPLOYMENT": 1,
+    "ENABLE_ORYX_BUILD": 1,
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-prod01",
     "CVE_DEVICE_THRESHOLD" : 20
   }
@@ -95,6 +99,10 @@ resource "azurerm_linux_function_app_slot" "stag" {
   }
 
   app_settings = {
+    "AZURE_FUNCTIONS_ENVIRONMENT": "Staging",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "SCM_DO_BUILD_DURING_DEPLOYMENT": 1,
+    "ENABLE_ORYX_BUILD": 1,
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-stag01",
     "CVE_DEVICE_THRESHOLD" : 5
   }
