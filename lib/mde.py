@@ -99,7 +99,7 @@ class MDEClient:
     )
     def get_devices(
         self,
-        odata_filter: str = "(computerDnsName ne null) and (isExcluded eq false)",
+        odata_filter: Optional[str] = None,
     ) -> list[MDEDevice]:
         """
         Gets a list of all devices from Microsoft Defender for Endpoint.
@@ -108,7 +108,7 @@ class MDEClient:
         only allows to fetch 10K devices at a time.
 
         params:
-            odata_filter="(computerDnsName ne null) and (isExcluded eq false)":
+            filter=None:
                 str: An OData filter to filter the devices.
 
         returns:
@@ -116,7 +116,8 @@ class MDEClient:
         """
         devices: list[MDEDevice] = []
 
-        devices_url = f"https://api.securitycenter.microsoft.com/api/machines?$filter={odata_filter}"
+        odata_filter = f"?$filter={odata_filter}" or ""
+        devices_url = f"https://api.securitycenter.microsoft.com/api/machines{odata_filter}"
 
         while devices_url:
             res = requests.get(

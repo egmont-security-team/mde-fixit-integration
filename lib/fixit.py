@@ -120,7 +120,7 @@ class FixItClient:
                 return None
             case 404:
                 logger.error(
-                    f'The request "{request_id}" was not found in the FixIt 4me account.',
+                    f'Couldn\'t find the FixIt request with ID "#{request_id}" in the 4me account.',
                     extra=custom_dimensions,
                 )
                 return None
@@ -194,6 +194,7 @@ class FixItClient:
                 )
                 return None
             case 422:
+                logger.error(res.content)
                 logger.error(
                     "Invalid request for creating the FixIt 4me request.",
                     extra=custom_dimensions,
