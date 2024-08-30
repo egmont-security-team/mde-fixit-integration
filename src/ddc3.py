@@ -39,9 +39,9 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     Actions:
         - Adds "ZZZ" tag to duplicate devices.
     """
-
     if myTimer.past_due:
-        logger.warning("The timer is past due!")
+        logger.warning("The timer is past due for DDC3!")
+        return
 
     # SETUP - start
 
@@ -68,7 +68,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     # SETUP - end
 
-    devices = mde_client.get_devices()
+    devices = mde_client.get_devices(odata_filter="(computerDnsName ne null) and (isExcluded eq false)")
     if not devices:
         logger.info("Task won't continue as there is no devices to process.")
         return

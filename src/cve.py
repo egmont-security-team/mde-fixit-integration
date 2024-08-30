@@ -7,7 +7,7 @@ for devices hit by certain CVE.
 import logging
 from datetime import UTC, datetime, timedelta
 import os
-from typing import Any, Optional
+from typing import Any
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
@@ -36,9 +36,9 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         - Create FixIt tickets for vulnerable devices.
         - Tags machine after creating FxiIt ticket.
     """
-
     if myTimer.past_due:
-        logger.warning("The timer is past due!")
+        logger.warning("The timer is past due for CVE!")
+        return
 
     # SETUP - start
 
@@ -70,7 +70,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     # SETUP - end
 
-    devices: list[MDEDevice] = mde_client.get_devices()
+    devices: list[MDEDevice] = mde_client.get_devices(odata_filter="(computerDnsName ne null) and (isExcluded eq false)")
     if not devices:
         logger.critical("Task won't continue as there is no devices to process.")
         return
@@ -105,7 +105,6 @@ def proccess_single_devices(
     devices: list[MDEDevice],
     mde_client: MDEClient,
     fixit_client: FixItClient,
-    FIXIT_SINGLE_TEMPLATE_ID: Optional[str] = None,
 ) -> int:
     """
     Processes the single vulnerable devices and creates FixIt tickets for them.
@@ -141,7 +140,7 @@ def proccess_single_devices(
 
         request_config: dict[str, Any] = {
             "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
-            "template_id": FIXIT_SINGLE_TEMPLATE_ID,
+            "template_id": os.environ["FIXIT_MULTI_TEMPLATE_ID"],
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},
                 {"id": "cve_id", "value": vulnerability.cve_id},
