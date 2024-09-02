@@ -13,14 +13,19 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
 ]
-dynamic=["dependencies"]
+dynamic = ["dependencies"]
 
 [project.urls]
 Homepage = "https://github.com/kanerix/mde-fixit-integration"
 Issues = "https://github.com/kanrix/mde-fixit-integration/issues"
 
 [tool.pylint.MESSAGES_CONTROL]
-disable = ["logging-fstring-interpolation", "invalid-name", "duplicate-code"]
+disable = [
+    "logging-fstring-interpolation",
+    "invalid-name",
+    "duplicate-code",
+    "line-too-long",
+]
 
 [tool.setuptools]
 packages = ["mde_fixit_integration"]
