@@ -1,6 +1,10 @@
+[build-system]
+requires = ["setuptools>=74"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "mde_fixit_integration_DAEKJO"
-version = "0.0.1"
+name = "mde_fixit_integration"
+version = "0.1.0"
 authors = [{ name = "DAEKJO", email = "daekjo@egmont.com" }]
 description = "A MDE FixIt Automation Integration"
 readme = "README.md"
@@ -9,14 +13,17 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Operating System :: OS Independent",
 ]
+dynamic=["dependencies"]
 
 [project.urls]
 Homepage = "https://github.com/kanerix/mde-fixit-integration"
 Issues = "https://github.com/kanrix/mde-fixit-integration/issues"
 
 [tool.pylint.MESSAGES_CONTROL]
-disable = [
-    "logging-fstring-interpolation",
-    "invalid-name",
-    "duplicate-code"
-]
+disable = ["logging-fstring-interpolation", "invalid-name", "duplicate-code"]
+
+[tool.setuptools]
+packages = ["mde_fixit_integration"]
+
+[tool.setuptools.dynamic.dependencies]
+file = "requirements.txt"
