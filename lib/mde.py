@@ -300,7 +300,7 @@ class MDEClient:
 
             # The Microsoft Defender API has a limit of 8k rows per request.
             # In case this URL exists, this means that more rows can be fetched.
-            # This URL given here can be used to fetch the next devices.
+            # The URL given here can be used to fetch the next devices.
             cve_url = json.get("@odata.nextLink")
 
         logger.info(
