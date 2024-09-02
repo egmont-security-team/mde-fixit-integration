@@ -100,7 +100,7 @@ resource "azurerm_linux_function_app" "app" {
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : azurerm_key_vault.prod.name,
-    "CVE_DEVICE_THRESHOLD" : 20
+    "CVE_DEVICE_THRESHOLD" : 20,
   }
 
   lifecycle {
@@ -150,7 +150,7 @@ resource "azurerm_linux_function_app_slot" "stag" {
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : azurerm_key_vault.stag.name,
-    "CVE_DEVICE_THRESHOLD" : 5
+    "CVE_DEVICE_THRESHOLD" : 5,
   }
 
   lifecycle {
