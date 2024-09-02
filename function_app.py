@@ -11,12 +11,9 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 from mde_fixit_integration.src import cve, ddc2, ddc3
 
 if conn := os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
-    # This is a workaround for the issue where the opentelemetry
-    # integration, logs unwanted and duplicate messages.
-    # https://github.com/Azure/azure-functions-python-worker/issues/1342
+    # This is a workaround for the issue where the root logger creates duplicate and unwanted logs.
+    # This should be removed when the issue is fixed in the future.
     # https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/monitor/azure-monitor-opentelemetry#logging-issues
-
-    # Stop duplicate logs (other than critical logs)
     root_logger = logging.getLogger()
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
