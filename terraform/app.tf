@@ -62,10 +62,11 @@ resource "azurerm_linux_function_app" "app" {
   location            = azurerm_resource_group.app.location
   resource_group_name = azurerm_resource_group.app.name
 
-  service_plan_id            = azurerm_service_plan.plan.id
-  storage_account_name       = azurerm_storage_account.app_state.name
-  storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
-  
+  service_plan_id             = azurerm_service_plan.plan.id
+  storage_account_name        = azurerm_storage_account.app_state.name
+  storage_account_access_key  = azurerm_storage_account.app_state.primary_access_key
+  functions_extension_version = "~4"
+
   storage_account {
     access_key   = azurerm_storage_account.app_state.primary_access_key
     account_name = azurerm_storage_account.app_state.name
@@ -76,6 +77,10 @@ resource "azurerm_linux_function_app" "app" {
 
   site_config {
     application_insights_connection_string = azurerm_application_insights.app_logging.connection_string
+
+    application_stack {
+      python_version = "3.11"
+    }
   }
 
   identity {
@@ -88,9 +93,9 @@ resource "azurerm_linux_function_app" "app" {
   app_settings = {
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Production",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
-    "WEBSITE_RUN_FROM_PACKAGE": 1,
-    "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": azurerm_storage_account.app_state.primary_connection_string,
-    "WEBSITE_CONTENTSHARE": "mde-fixit-int-prod",
+    "WEBSITE_RUN_FROM_PACKAGE" : 1,
+    "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING" : azurerm_storage_account.app_state.primary_connection_string,
+    "WEBSITE_CONTENTSHARE" : "mde-fixit-int-prod",
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-prod01",
@@ -105,10 +110,11 @@ resource "azurerm_linux_function_app" "app" {
 }
 
 resource "azurerm_linux_function_app_slot" "stag" {
-  name                       = "stag"
-  function_app_id            = azurerm_linux_function_app.app.id
-  storage_account_name       = azurerm_storage_account.app_state.name
-  storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
+  name                        = "stag"
+  function_app_id             = azurerm_linux_function_app.app.id
+  storage_account_name        = azurerm_storage_account.app_state.name
+  storage_account_access_key  = azurerm_storage_account.app_state.primary_access_key
+  functions_extension_version = "~4"
 
   storage_account {
     account_name = azurerm_storage_account.app_state.name
@@ -120,6 +126,10 @@ resource "azurerm_linux_function_app_slot" "stag" {
 
   site_config {
     application_insights_connection_string = azurerm_application_insights.app_logging.instrumentation_key
+
+    application_stack {
+      python_version = "3.11"
+    }
   }
 
   identity {
@@ -132,9 +142,9 @@ resource "azurerm_linux_function_app_slot" "stag" {
   app_settings = {
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Staging",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
-    "WEBSITE_RUN_FROM_PACKAGE": 1,
-    "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": azurerm_storage_account.app_state.primary_connection_string,
-    "WEBSITE_CONTENTSHARE": "mde-fixit-int-stag",
+    "WEBSITE_RUN_FROM_PACKAGE" : 1,
+    "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING" : azurerm_storage_account.app_state.primary_connection_string,
+    "WEBSITE_CONTENTSHARE" : "mde-fixit-int-stag",
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-stag01",
