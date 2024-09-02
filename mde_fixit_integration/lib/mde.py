@@ -117,10 +117,7 @@ class MDEClient:
         devices: list[MDEDevice] = []
 
         odata_filter = f"?$filter={odata_filter}" or ""
-        devices_url = (
-            f"https://api.securitycenter.microsoft.com/api/machines{
-                odata_filter}"
-        )
+        devices_url = f"https://api.securitycenter.microsoft.com/api/machines{odata_filter}"
 
         while devices_url:
             res = requests.get(
@@ -135,10 +132,7 @@ class MDEClient:
 
             # Get the new devices from the request.
             new_devices = json["value"]
-            logger.debug(
-                f"Fetched {
-                    len(new_devices)} new devices from Microsoft Defender for Endpoint."
-            )
+            logger.debug(f"Fetched {len(new_devices)} new devices from Microsoft Defender for Endpoint.")
 
             # Turn the JSON payloads from MDE into MDEDevice objects.
             for payload in new_devices:
@@ -163,8 +157,7 @@ class MDEClient:
                         "device_id": new_device_id,
                     }
                     logger.error(
-                        f'Couldn\'t create a new "MDEDevice" from the payload for device with UUID={
-                            new_device_id}.',
+                        f'Couldn\'t create a new "MDEDevice" from the payload for device with UUID={new_device_id}.',
                         extra=custom_dimensions,
                     )
 
@@ -174,8 +167,7 @@ class MDEClient:
             devices_url = json.get("@odata.nextLink")
 
         logger.info(
-            f"Fetched a total of {
-                len(devices)} devices from Microsoft Defender for Endpoint."
+            f"Fetched a total of {len(devices)} devices from Microsoft Defender for Endpoint."
         )
 
         return devices
@@ -206,15 +198,14 @@ class MDEClient:
             action:
                 Literal["Add", "Remove"]: The actions to perform.
             sleep=None:
-                Optional[float]: If present, we will sleep for the given amount of seconds after the request.
+                Optional[float]: Will sleep for 'sleep' seconds after the request.
 
         returns:
             bool: True if it successfully removes the tag otherwise False.
             None: If the request fails.
         """
         res = requests.post(
-            f"https://api.securitycenter.microsoft.com/api/machines/{
-                device.uuid}/tags",
+            f"https://api.securitycenter.microsoft.com/api/machines/{device.uuid}/tags",
             headers={"Authorization": f"Bearer {self.api_token}"},
             json={
                 "Value": tag,
@@ -225,8 +216,7 @@ class MDEClient:
 
         res.raise_for_status()
 
-        logger.info(f'Performed action "{action}" with tag "{
-                    tag}" on device {device}.')
+        logger.info(f'Performed action "{action}" with tag "{tag}" on device {device}.')
 
         if sleep:
             time.sleep(sleep)
@@ -285,8 +275,7 @@ class MDEClient:
 
             new_vulnerabilities = json["Results"]
             logger.info(
-                f"Fetched {len(
-                    new_vulnerabilities)} new vulnerabilities from Microsoft Defender for Endpoint."
+                f"Fetched {len(new_vulnerabilities)} new vulnerabilities from Microsoft Defender for Endpoint."
             )
 
             for payload in new_vulnerabilities:
@@ -302,20 +291,14 @@ class MDEClient:
                         )
                     )
                 except KeyError:
-                    logger.error(
-                        f'Couldn\'t create a new "MDEVulnerability" from the payload {
-                            payload}.'
-                    )
+                    logger.error(f'Couldn\'t create a new "MDEVulnerability" from the payload {payload}.')
 
             # The Microsoft Defender API has a limit of 8k rows per request.
             # In case this URL exists, this means that more rows can be fetched.
             # The URL given here can be used to fetch the next devices.
             cve_url = json.get("@odata.nextLink")
 
-        logger.info(
-            f"Fetched a total of {
-                len(vulnerabilities)} devices from Microsoft Defender for Endpoint."
-        )
+        logger.info(f"Fetched a total of {len(vulnerabilities)} devices from Microsoft Defender for Endpoint.")
 
         return vulnerabilities
 
@@ -336,8 +319,7 @@ class MDEClient:
         """
         users: list[str] = []
 
-        users_url = f"https://api.securitycenter.microsoft.com/api/machines/{
-            device.uuid}/logonusers"
+        users_url = f"https://api.securitycenter.microsoft.com/api/machines/{device.uuid}/logonusers"
 
         while users_url:
             res = requests.get(
@@ -352,8 +334,7 @@ class MDEClient:
 
             new_users = json["value"]
             logger.debug(
-                f"Fetched {
-                    len(new_users)} new users from Microsoft Defender for Endpoint."
+                f"Fetched {len(new_users)} new users from Microsoft Defender for Endpoint."
             )
 
             users.extend(user["accountName"] for user in new_users)
@@ -361,8 +342,7 @@ class MDEClient:
             users_url = json.get("@odata.nextLink")
 
         logger.info(
-            f"Fetched a total of {
-                len(users)} users from Microsoft Defender for Endpoint."
+            f"Fetched a total of {len(users)} users from Microsoft Defender for Endpoint."
         )
 
         return users
@@ -376,13 +356,14 @@ class MDEClient:
     def get_device_recommendations(
         self,
         device: MDEDevice,
-        odata_filter="remediationType eq 'Update'",
+        odata_filter:Optional[str]=None,
     ) -> list[str]:
         """
         Returns a list of recommendations for a given device.
 
         The default filter is set to only get recommendations that are of type "Update".
-        This is because we are only interested in recommendations that are related to updating software.
+        This is because we are only interested in recommendations that are related to
+        updating software.
 
         params:
             device:
@@ -395,8 +376,8 @@ class MDEClient:
         """
         recommendations = []
 
-        recommendation_url: str = f"https://api-eu.securitycenter.microsoft.com/api/machines/{
-            device.uuid}/recommendations?$filter={odata_filter}"
+        odata_filter = f"?$filter={odata_filter}" or ""
+        recommendation_url: str = f"https://api-eu.securitycenter.microsoft.com/api/machines/{device.uuid}/recommendations{odata_filter}"
 
         while recommendation_url:
             res = requests.get(
@@ -414,10 +395,7 @@ class MDEClient:
 
             recommendation_url = json.get("@odata.nextLink")
 
-        logger.info(
-            f"Fetched a total of {len(recommendations)} recommendation for device {
-                device} from Microsoft Defender for Endpoint."
-        )
+        logger.info(f"Fetched a total of {len(recommendations)} recommendation for device {device} from Microsoft Defender for Endpoint.")
 
         return recommendations
 
@@ -538,8 +516,7 @@ class MDEDevice:
                 pattern = re.compile(
                     r"^SKIP-CVE(?:-\[(?P<CVE>CVE-\d{4}-\d{4,7})\])?$")
             case _:
-                logger.warning(f'''The automation "{automation}" is not recognized.
-                    Can\'t peform a valid "should_skip()" check, so we skip the device.''')
+                logger.warning(f'''The automation "{automation}" is not recognized. Can\'t peform a valid "should_skip()" check, so we skip the device.''')
                 return True
 
         for tag in self.tags:

@@ -114,9 +114,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
             if start + timedelta(hours=1) < datetime.now(UTC):
                 start = datetime.now(UTC)
 
-    logger.info(
-        f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defender portal."
-    )
+    logger.info(f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defender portal.")
 
 
 def is_zzz_tag(tag: str) -> bool:
