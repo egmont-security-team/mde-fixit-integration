@@ -112,7 +112,7 @@ class MDEClient:
                 str: An OData filter to filter the devices.
 
         returns:
-            list["MDEDevice"]: The machines from Microsoft Defender for Endpoint.
+            list[MDEDevice]: The machines from Microsoft Defender for Endpoint.
         """
         devices: list[MDEDevice] = []
 
