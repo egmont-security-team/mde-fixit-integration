@@ -9,10 +9,9 @@ on:
       - 'LICENSE'
       - 'README.md'
       - 'CHANGELOG.md'
-      - 'terraform'
+      - 'terraform/**'
 
   workflow_dispatch:
-
 
 jobs:
   prepare:
