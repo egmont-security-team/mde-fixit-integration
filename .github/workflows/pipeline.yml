@@ -9,7 +9,6 @@ on:
       - 'LICENSE'
       - 'README.md'
       - 'CHANGELOG.md'
-      - 'terraform/**'
 
   workflow_dispatch:
 
