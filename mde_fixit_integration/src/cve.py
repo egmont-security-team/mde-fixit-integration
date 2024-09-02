@@ -168,7 +168,7 @@ def proccess_single_devices(
         if len(recommendations) == 0:
             request_config["team"] = os.environ["FIXIT_SEC_TEAM_ID"]
         elif device.is_server():
-            request_config["team"] = os.environ["FIXIT_CLOUD_TEAM_ID"]
+            request_config["team"] = os.environ["FIXIT_CAD_TEAM_ID"]
         else:
             request_config["team"] = os.environ["FIXIT_SD_TEAM_ID"]
 
