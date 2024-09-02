@@ -15,6 +15,18 @@ resource "azurerm_resource_group" "app" {
   }
 }
 
+resource "azurerm_user_assigned_identity" "app_mi" {
+  name                = "${local.repository_name}-app-mi"
+  resource_group_name = azurerm_resource_group.app.name
+  location            = azurerm_resource_group.app.location
+
+  lifecycle {
+    ignore_changes = [
+      tags,
+    ]
+  }
+}
+
 resource "azurerm_storage_account" "app_state" {
   name                = "fastate${random_string.fastate_resource_code.result}"
   resource_group_name = azurerm_resource_group.app.name
@@ -53,7 +65,7 @@ resource "azurerm_linux_function_app" "app" {
   service_plan_id            = azurerm_service_plan.plan.id
   storage_account_name       = azurerm_storage_account.app_state.name
   storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
-
+  
   storage_account {
     access_key   = azurerm_storage_account.app_state.primary_access_key
     account_name = azurerm_storage_account.app_state.name
@@ -74,9 +86,9 @@ resource "azurerm_linux_function_app" "app" {
   }
 
   app_settings = {
-    "WEBSITE_ENABLE_SYNC_UPDATE_SITE": "true",
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Production",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
+    "WEBSITE_RUN_FROM_PACKAGE": 1,
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-prod01",
@@ -97,8 +109,8 @@ resource "azurerm_linux_function_app_slot" "stag" {
   storage_account_access_key = azurerm_storage_account.app_state.primary_access_key
 
   storage_account {
-    access_key   = azurerm_storage_account.app_state.primary_access_key
     account_name = azurerm_storage_account.app_state.name
+    access_key   = azurerm_storage_account.app_state.primary_access_key
     name         = azurerm_storage_account.app_state.name
     type         = "AzureFiles"
     share_name   = "app-state"
@@ -116,26 +128,14 @@ resource "azurerm_linux_function_app_slot" "stag" {
   }
 
   app_settings = {
-    "WEBSITE_ENABLE_SYNC_UPDATE_SITE": "true",
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Staging",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
+    "WEBSITE_RUN_FROM_PACKAGE": 1,
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : "kv-mde-fixit-int-stag01",
     "CVE_DEVICE_THRESHOLD" : 5
   }
-
-  lifecycle {
-    ignore_changes = [
-      tags,
-    ]
-  }
-}
-
-resource "azurerm_user_assigned_identity" "app_mi" {
-  name                = "${local.repository_name}-app-mi"
-  resource_group_name = azurerm_resource_group.app.name
-  location            = azurerm_resource_group.app.location
 
   lifecycle {
     ignore_changes = [
