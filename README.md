@@ -63,8 +63,9 @@ If a device should not be included in a automation, you can give specific tags i
 - `FIXIT_MULTI_TEMPLATE_ID`: The template ID of the a multiple vulnerable devices template.
 - `FIXIT_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created.
 - `FIXIT_SD_TEAM_ID`: The team ID of the service desk team.
-- `FIXIT_EUX_TEAM_ID`: The team ID of the end user experience team.
+- `FIXIT_MW_TEAM_ID`: The team ID of the modern workplace team.
 - `FIXIT_SEC_TEAM_ID`: The team ID of the security team.
+- `FIXIT_CAD_TEAM_ID`: The team ID of the cloud advisory and delivery team.
 
 ### Access needed
 
