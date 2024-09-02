@@ -99,7 +99,7 @@ resource "azurerm_linux_function_app" "app" {
     "WEBSITE_CONTENTSHARE" : "mde-fixit-int-prod",
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
-    "KEY_VAULT_NAME" : "kv-mde-fixit-int-prod01",
+    "KEY_VAULT_NAME" : azurerm_key_vault.prod.name,
     "CVE_DEVICE_THRESHOLD" : 20
   }
 
@@ -149,7 +149,7 @@ resource "azurerm_linux_function_app_slot" "stag" {
     "WEBSITE_CONTENTSHARE" : "mde-fixit-int-stag",
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
-    "KEY_VAULT_NAME" : "kv-mde-fixit-int-stag01",
+    "KEY_VAULT_NAME" : azurerm_key_vault.stag.name,
     "CVE_DEVICE_THRESHOLD" : 5
   }
 
