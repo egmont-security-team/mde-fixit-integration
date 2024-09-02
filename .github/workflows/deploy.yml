@@ -9,7 +9,7 @@ on:
         type: string
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: "."
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: "./mde_fixit_integration"
     
 jobs:
   deploy-to-azure:
