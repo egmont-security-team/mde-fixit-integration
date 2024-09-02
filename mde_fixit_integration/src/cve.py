@@ -12,9 +12,9 @@ from typing import Any
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 
-from lib.fixit import FixItClient
-from lib.mde import MDEClient, MDEDevice, MDEVulnerability
-from lib.utils import create_environment
+from mde_fixit_integration.lib.fixit import FixItClient
+from mde_fixit_integration.lib.mde import MDEClient, MDEDevice, MDEVulnerability
+from mde_fixit_integration.lib.utils import create_environment
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,8 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         odata_filter="(computerDnsName ne null) and (isExcluded eq false)"
     )
     if not devices:
-        logger.critical("Task won't continue as there is no devices to process.")
+        logger.critical(
+            "Task won't continue as there is no devices to process.")
         return
 
     vulnerabilities: list[MDEVulnerability] = mde_client.get_vulnerabilities()
@@ -98,7 +99,8 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
 
     logger.info(
-        f"Created a total of {total_fixit_tickets} FixIt-tickets (multi={multi_fixit_tickets}, single={single_fixit_tickets})"
+        f"""Created a total of {total_fixit_tickets} FixIt-tickets
+        (multi={multi_fixit_tickets}, single={single_fixit_tickets})"""
     )
 
 
@@ -119,11 +121,13 @@ def proccess_single_devices(
     single_fixit_tickets: int = 0
 
     for device_uuid, vulnerability in single_vulnerable_devices.items():
-        device = next((dev for dev in devices if dev.uuid == device_uuid), None)
+        device = next(
+            (dev for dev in devices if dev.uuid == device_uuid), None)
 
         if not device:
             logger.warning(
-                f'No device found with UUID="{device_uuid}" for single ticket. Skipping..'
+                f'No device found with UUID="{
+                    device_uuid}" for single ticket. Skipping..'
             )
             continue
 
@@ -135,9 +139,11 @@ def proccess_single_devices(
 
         logger.info(f"Creating single ticket for {device}.")
 
-        cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
+        cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{
+            vulnerability.cve_id}/overview"
         device_page = (
-            f"https://security.microsoft.com/machines/v2/{device.uuid}/overview"
+            f"https://security.microsoft.com/machines/v2/{
+                device.uuid}/overview"
         )
 
         request_config: dict[str, Any] = {
@@ -153,7 +159,8 @@ def proccess_single_devices(
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
                 {"id": "device_os", "value": device.os},
-                {"id": "device_users", "value": ", ".join(users or ["Unknown"])},
+                {"id": "device_users", "value": ", ".join(
+                    users or ["Unknown"])},
                 {"id": "recommendations", "value": "\n".join(recommendations)},
             ],
         }
@@ -166,13 +173,15 @@ def proccess_single_devices(
             request_config["team"] = os.environ["FIXIT_SD_TEAM_ID"]
 
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Single Vulnerable Device",
+            f"Security[{
+                vulnerability.cve_id} - {vulnerability.cve_score}]: Single Vulnerable Device",
             **request_config,
         )
 
         if fixit_res is None:
             logger.error(
-                f"Did not succesfully create the FixIt request for {device} (SINGLE). Skipping.."
+                f"Did not succesfully create the FixIt request for {
+                    device} (SINGLE). Skipping.."
             )
             continue
 
@@ -181,7 +190,8 @@ def proccess_single_devices(
         fixit_id = fixit_res["id"]
         if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
             logger.error(
-                f'Created single FixIt ticket "#{fixit_id}" but failed to give {device} a tag.'
+                f'Created single FixIt ticket "#{
+                    fixit_id}" but failed to give {device} a tag.'
             )
 
     return single_fixit_tickets
@@ -222,11 +232,13 @@ def proccess_multiple_devices(
             continue
 
         for device_uuid in vulnerability.devices:
-            device = next((dev for dev in devices if dev.uuid == device_uuid), None)
+            device = next(
+                (dev for dev in devices if dev.uuid == device_uuid), None)
 
             if not device:
                 logger.error(
-                    f'No device found with UUID="{device_uuid}" for multi ticket.'
+                    f'No device found with UUID="{
+                        device_uuid}" for multi ticket.'
                 )
                 continue
 
@@ -240,7 +252,8 @@ def proccess_multiple_devices(
 
         logger.info(f"Creating multi ticket for {device}.")
 
-        cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
+        cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{
+            vulnerability.cve_id}/overview"
 
         device_count = str(len(vulnerable_devices))
 
@@ -254,18 +267,21 @@ def proccess_multiple_devices(
                 {"id": "cve_description", "value": vulnerability.description or ""},
                 {"id": "software_name", "value": vulnerability.software_name or ""},
                 {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
-                {"id": "device_count", "value": f"{device_count} affected devices"},
+                {"id": "device_count", "value": f"{
+                    device_count} affected devices"},
             ],
         }
 
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",
+            f"Security[{
+                vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",
             **request_config,
         )
 
         if fixit_res is None:
             logger.error(
-                f"Did not succesfully create the FixIt request for {vulnerability} (MULTI). Skipping.."
+                f"Did not succesfully create the FixIt request for {
+                    vulnerability} (MULTI). Skipping.."
             )
             continue
 
@@ -275,7 +291,8 @@ def proccess_multiple_devices(
         for device in vulnerable_devices:
             if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
                 logger.error(
-                    f'Created multi FixIt ticket "#{fixit_id}" but failed to give {device} devices a tag.'
+                    f'Created multi FixIt ticket "#{
+                        fixit_id}" but failed to give {device} devices a tag.'
                 )
 
     return multi_fixit_tickets
@@ -321,7 +338,8 @@ def get_vulnerable_devices(
     for vulnerability in vulnerabilities:
         if vulnerability.devices is None:
             logger.warning(
-                f"Skipping vulnerability {vulnerability} since it has no affected devices."
+                f"Skipping vulnerability {
+                    vulnerability} since it has no affected devices."
             )
             continue
 
@@ -374,13 +392,15 @@ def should_skip_device(
         datetime.now(UTC) - timedelta(days=7)
     ):
         logger.debug(
-            f"Skipping {device} since it has not been in registered for more than 7 days."
+            f"Skipping {
+                device} since it has not been in registered for more than 7 days."
         )
         return True
 
     if check_should_skip and device.should_skip("CVE", cve=cve_id):
         logger.debug(
-            f"Skipping {device} since its tags indicate it should be skipped for this automation."
+            f"Skipping {
+                device} since its tags indicate it should be skipped for this automation."
         )
         return True
 

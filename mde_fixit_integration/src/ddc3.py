@@ -13,8 +13,8 @@ from time import sleep
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 
-from lib.mde import MDEClient, MDEDevice
-from lib.utils import create_environment
+from mde_fixit_integration.lib.mde import MDEClient, MDEDevice
+from mde_fixit_integration.lib.utils import create_environment
 
 DeviceDict = dict[str, list[MDEDevice]]
 

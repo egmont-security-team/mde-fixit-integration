@@ -10,9 +10,9 @@ import os
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 
-from lib.fixit import FixItClient
-from lib.mde import MDEClient
-from lib.utils import create_environment
+from mde_fixit_integration.lib.fixit import FixItClient
+from mde_fixit_integration.lib.mde import MDEClient
+from mde_fixit_integration.lib.utils import create_environment
 
 logger = logging.getLogger(__name__)
 
