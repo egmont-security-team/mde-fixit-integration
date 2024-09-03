@@ -15,7 +15,7 @@ if conn := os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
     # logs unwanted and duplicate messages.
     # https://github.com/Azure/azure-functions-python-worker/issues/1342
 
-    # Stop duplicate logs (other than critical logs)
+    # Stop duplicate logs
     logging.getLogger("azure.core.pipeline.policies.http_logging_policy").handlers.clear()
     # Stop unwated logs
     logging.getLogger("azure.monitor.opentelemetry.exporter.export").handlers.clear()
