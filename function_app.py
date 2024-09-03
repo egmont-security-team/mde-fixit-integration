@@ -11,19 +11,16 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 from mde_fixit_integration.src import cve, ddc2, ddc3
 
 if conn := os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
-    configure_azure_monitor(connection_string=conn)
     # This is a workaround for the issue where the opentelemetry library
     # logs unwanted and duplicate messages.
     # https://github.com/Azure/azure-functions-python-worker/issues/1342
 
     # Stop duplicate logs (other than critical logs)
-    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(
-        logging.CRITICAL
-    )
-    # Stop unwanted logs from the exporter
-    logging.getLogger("azure.monitor.opentelemetry.exporter.export").setLevel(
-        logging.WARNING
-    )
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").handlers.clear()
+    # Stop unwated logs
+    logging.getLogger("azure.monitor.opentelemetry.exporter.export").handlers.clear()
+
+    configure_azure_monitor(connection_string=conn)
 
 app = func.FunctionApp()
 
