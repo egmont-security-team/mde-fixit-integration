@@ -1,5 +1,5 @@
 resource "azurerm_monitor_action_group" "fa_errors" {
-  name                = "errors-actiongroup"
+  name                = "${local.repository_name}-ag-errors"
   resource_group_name = azurerm_resource_group.app.name
   short_name          = "errors"
 
