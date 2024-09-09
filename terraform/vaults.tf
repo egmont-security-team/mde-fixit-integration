@@ -113,7 +113,7 @@ resource "azurerm_key_vault_secret" "azure_mde_client_id_prod" {
 
 resource "azurerm_key_vault_secret" "azure_mde_secret_value_prod" {
   name         = "Azure-MDE-Secret-Value"
-  value        = var.azure_mde_secret_stag
+  value        = var.azure_mde_secret_prod
   key_vault_id = azurerm_key_vault.prod.id
 }
 
