@@ -23,7 +23,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "example" {
   evaluation_frequency = "PT30M"
   window_duration      = "PT30M"
   scopes               = [azurerm_application_insights.app_logging.id]
-  severity             = 4
+  severity             = 1
 
   criteria {
     query                   = <<-QUERY
