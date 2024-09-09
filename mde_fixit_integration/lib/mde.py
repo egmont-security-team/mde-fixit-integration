@@ -147,18 +147,16 @@ class MDEClient:
                             operating_system=payload["osPlatform"],
                             onboarding_status=payload["onboardingStatus"],
                             tags=payload["machineTags"],
-                            first_seen=datetime.fromisoformat(
-                                payload["firstSeen"]),
+                            first_seen=datetime.fromisoformat(payload["firstSeen"]),
                         )
                     )
                 except ValueError:
-                    custom_dimensions = {
-                        "payload": json.stringify(payload),
-                        "device_id": new_device_id,
-                    }
                     logger.error(
                         f'Couldn\'t create a new "MDEDevice" from the payload for device with UUID={new_device_id}.',
-                        extra=custom_dimensions,
+                        extra={
+                            "payload": json.stringify(payload),
+                            "device_id": new_device_id,
+                        },
                     )
 
             # The Microsoft Defender API has a limit of 10k devices per request.
@@ -166,9 +164,7 @@ class MDEClient:
             # This URL given here can be used to fetch the next devices.
             devices_url = json.get("@odata.nextLink")
 
-        logger.info(
-            f"Fetched a total of {len(devices)} devices from Microsoft Defender for Endpoint."
-        )
+        logger.info(f"Fetched a total of {len(devices)} devices from Microsoft Defender for Endpoint.")
 
         return devices
 
@@ -213,10 +209,8 @@ class MDEClient:
             timeout=300,
         )
 
-        if delay_str := res.headers.get("Retry-After"):
-            # Add 4 seconds to the delay to make sure we
-            # don't hit the limit immediately after.
-            delay = int(delay_str) + 4
+        if delay := res.headers.get("Retry-After"):
+            delay = int(delay)
             logger.info(f"The request was rate limited. Retrying in {delay} seconds.")
             time.sleep(delay)
             self.alter_device_tag(device, tag, action)
