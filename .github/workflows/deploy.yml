@@ -40,13 +40,22 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        
+      - name: Get deployment slot
+        id: get-deployment-slot
+        run: |
+          if [[ ${{ inputs.DEPLOY_ENV }} == 'prod' ]]; then
+            echo "DEPLOY_SLOT=production" >> $GITHUB_OUTPUT
+          elif [[ ${{ inputs.DEPLOY_ENV }} == 'stag' ]]; then
+            echo "DEPLOY_SLOT=staging" >> $GITHUB_OUTPUT
+          fi
 
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
           app-name: 'mde-fixit-integration-fa'
-          slot-name: ${{ inputs.DEPLOY_ENV }}
+          slot-name: ${{steps.get-deployment-slot.outputs.DEPLOY_SLOT }}
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           scm-do-build-during-deployment: true
           enable-oryx-build: true
