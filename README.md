@@ -44,7 +44,8 @@ If a device should not be included in a automation, you can give specific tags i
 ### Environment variables
 
 - Set the environment variable `KEY_VAULT_NAME` to change what key vault will be used to load secrets.
-- Set the environment variable `CVE_DEVICE_THRESHOLD` to change how many devices under 1 vulnerability to create a multi ticket.
+- Set the environment variable `CVE_PC_THRESHOLD` to change how many pc under 1 vulnerability to create a multi ticket.
+- Set the environment variable `CVE_SERVER_THRESHOLD` to change how many serveres under 1 vulnerability to create a multi ticket.
 
 ### Secrets
 

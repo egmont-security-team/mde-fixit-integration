@@ -110,7 +110,7 @@ resource "azurerm_key_vault_secret" "azure_mde_secret_value_prod" {
 
 resource "azurerm_key_vault_secret" "fixit_4me_base_url_prod" {
   name         = "FixIt-4Me-Base-URL"
-  value        = "ttps://api.4me.com/v1"
+  value        = "https://api.4me.com/v1"
   key_vault_id = azurerm_key_vault.prod.id
 }
 

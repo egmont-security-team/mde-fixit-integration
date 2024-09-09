@@ -24,7 +24,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -74,15 +74,12 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         odata_filter="(computerDnsName ne null) and (isExcluded eq false)"
     )
     if not devices:
-        logger.critical(
-            "Task won't continue as there is no devices to process.")
+        logger.critical("Task won't continue as there is no devices to process.")
         return
 
     vulnerabilities: list[MDEVulnerability] = mde_client.get_vulnerabilities()
     if not vulnerabilities:
-        logger.critical(
-            "Task won't continue as there is no vulnerabilities to process."
-        )
+        logger.critical("Task won't continue as there is no vulnerabilities to process.")
         return
 
     multi_vulnerable_devices, single_vulnerable_devices = get_vulnerable_devices(
@@ -118,8 +115,7 @@ def proccess_single_devices(
     single_fixit_tickets: int = 0
 
     for device_uuid, vulnerability in single_vulnerable_devices.items():
-        device = next(
-            (dev for dev in devices if dev.uuid == device_uuid), None)
+        device = next((dev for dev in devices if dev.uuid == device_uuid), None)
 
         if not device:
             logger.warning(f'No device found with UUID="{device_uuid}" for single ticket. Skipping..')
@@ -138,7 +134,7 @@ def proccess_single_devices(
 
         request_config: dict[str, Any] = {
             "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
-            "template_id": os.environ["FIXIT_MULTI_TEMPLATE_ID"],
+            "template_id": os.environ["FIXIT_SINGLE_TEMPLATE_ID"],
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},
                 {"id": "cve_id", "value": vulnerability.cve_id},
@@ -208,13 +204,13 @@ def proccess_multiple_devices(
     for cve_id, vulnerability in multi_vulnerable_devices.items():
         vulnerable_devices = []
 
-        if not vulnerability.devices:
-            logger.warning(f"Skipping {vulnerability} since it has no affected devices.")
+        device_with_fixit_tag = len(list(filter(lambda dev: any(FixItClient.extract_id(tag) for tag in dev.tags), devices)))
+        if device_with_fixit_tag / len(devices) > 0.75:
+            logger.info("Skipping multi ticket creation since more than 75% of devices already have a FixIt tag.")
             continue
 
         for device_uuid in vulnerability.devices:
-            device = next(
-                (dev for dev in devices if dev.uuid == device_uuid), None)
+            device = next((dev for dev in devices if dev.uuid == device_uuid), None)
 
             if not device:
                 logger.error(f'No device found with UUID="{device_uuid}" for multi ticket.')
@@ -296,7 +292,8 @@ def get_vulnerable_devices(
     single_vulnerable_devices: dict[str, MDEVulnerability] = {}
 
     try:
-        device_threshold = int(os.environ["CVE_DEVICE_THRESHOLD"])
+        pc_threshold = int(os.environ["CVE_PC_THRESHOLD"])
+        server_threshold = int(os.environ["CVE_SERVER_THRESHOLD"])
     except KeyError as exception:
         logger.error("No device threshold specefied. Can't continue!")
         raise exception
@@ -309,7 +306,8 @@ def get_vulnerable_devices(
             logger.warning(f"Skipping vulnerability {vulnerability} since it has no affected devices.")
             continue
 
-        if len(vulnerability.devices) >= device_threshold:
+        threshold = server_threshold if vulnerability.is_sever_software() else pc_threshold
+        if len(vulnerability.devices) >= threshold:
             device_key = f"{vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}"
             multi_vulnerable_devices[device_key] = vulnerability
             continue
@@ -353,9 +351,7 @@ def should_skip_device(
     returns:
         bool: If the device should be skipped.
     """
-    if check_first_seen and not device.first_seen < (
-        datetime.now(UTC) - timedelta(days=7)
-    ):
+    if check_first_seen and not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):
         logger.debug(f"Skipping {device} since it has not been in registered for more than 7 days.")
         return True
 

@@ -94,13 +94,14 @@ resource "azurerm_linux_function_app" "app" {
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Production",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
     "WEBSITE_RUN_FROM_PACKAGE" : 1,
-    "WEBSITE_ENABLE_SYNC_UPDATE_SITE": "true",
+    "WEBSITE_ENABLE_SYNC_UPDATE_SITE" : "true",
     "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING" : azurerm_storage_account.app_state.primary_connection_string,
     "WEBSITE_CONTENTSHARE" : "mde-fixit-int-prod",
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : azurerm_key_vault.prod.name,
-    "CVE_DEVICE_THRESHOLD" : 20,
+    "CVE_PC_THRESHOLD" : 20,
+    "CVE_SERVER_THRESHOLD" : 5,
   }
 
   lifecycle {
@@ -144,13 +145,14 @@ resource "azurerm_linux_function_app_slot" "stag" {
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Staging",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
     "WEBSITE_RUN_FROM_PACKAGE" : 1,
-    "WEBSITE_ENABLE_SYNC_UPDATE_SITE": "true",
+    "WEBSITE_ENABLE_SYNC_UPDATE_SITE" : "true",
     "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING" : azurerm_storage_account.app_state.primary_connection_string,
     "WEBSITE_CONTENTSHARE" : "mde-fixit-int-stag",
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : azurerm_key_vault.stag.name,
-    "CVE_DEVICE_THRESHOLD" : 5,
+    "CVE_PC_THRESHOLD" : 10,
+    "CVE_SERVER_THRESHOLD" : 5,
   }
 
   lifecycle {
