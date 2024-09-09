@@ -339,9 +339,7 @@ class MDEClient:
 
             users_url = json.get("@odata.nextLink")
 
-        logger.info(
-            f"Fetched a total of {len(users)} users from Microsoft Defender for Endpoint."
-        )
+        logger.info(f"Fetched a total of {len(users)} users from Microsoft Defender for Endpoint.")
 
         return users
 

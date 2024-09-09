@@ -14,7 +14,7 @@ from azure.identity import DefaultAzureCredential
 
 from mde_fixit_integration.lib.fixit import FixItClient
 from mde_fixit_integration.lib.mde import MDEClient, MDEDevice, MDEVulnerability
-from mde_fixit_integration.lib.utils import create_environment
+from mde_fixit_integration.lib.utils import create_environment, get_cve_from_str
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -201,12 +201,21 @@ def proccess_multiple_devices(
     """
     multi_fixit_tickets: int = 0
 
-    for cve_id, vulnerability in multi_vulnerable_devices.items():
+    open_multi_requests = fixit_client.list_requests(query_filter=f"status=assigned&template={os.environ['FIXIT_MULTI_TEMPLATE_ID']}")
+
+    if open_multi_requests is None:
+        logger.error("Failed to get open FixIt requests. Skipping multi ticket creation.")
+        return 0
+
+    for vulnerability in multi_vulnerable_devices.values():
         vulnerable_devices = []
 
-        device_with_fixit_tag = len(list(filter(lambda dev: any(FixItClient.extract_id(tag) for tag in dev.tags), devices)))
-        if device_with_fixit_tag / len(devices) > 0.75:
-            logger.info("Skipping multi ticket creation since more than 75% of devices already have a FixIt tag.")
+        if any(get_cve_from_str(req["subject"]) == vulnerability.cve_id for req in open_multi_requests):
+            logger.info(f"Skipping {vulnerability.cve_id} since there is already an open FixIt request for it.")
+            continue
+        else:
+            test_str = get_cve_from_str("Security[CVE-2024-38140 - 9.8]: Multiple Vulnerable Devices")
+            logger.warning(f"test - {vulnerability.cve_id} != {test_str}")
             continue
 
         for device_uuid in vulnerability.devices:
@@ -216,7 +225,7 @@ def proccess_multiple_devices(
                 logger.error(f'No device found with UUID="{device_uuid}" for multi ticket.')
                 continue
 
-            if should_skip_device(device, cve_id, check_fixit_request=False):
+            if should_skip_device(device, vulnerability.cve_id, check_fixit_request=False):
                 continue
 
             vulnerable_devices.append(device)

@@ -4,6 +4,7 @@ Utility functions used by multiple scripts.
 
 import os
 import logging
+import re
 from typing import Optional
 
 from azure.identity import DefaultAzureCredential
@@ -70,3 +71,19 @@ def create_environment(key_vault_name: str, credential: DefaultAzureCredential) 
     get_secret(sc, "CVE-MW-Team-ID", env_var="FIXIT_MW_TEAM_ID")
     get_secret(sc, "CVE-SEC-Team-ID", env_var="FIXIT_SEC_TEAM_ID")
     get_secret(sc, "CVE-CAD-Team-ID", env_var="FIXIT_CAD_TEAM_ID")
+
+def get_cve_from_str(string: str) -> Optional[str]:
+    """
+    Gets the first CVE from a given string (if it has a prober CVE tag).
+    This uses regular expression to determine if the tag is prober.
+
+    params:
+        string:
+            str: The string to extract the CVE from.
+
+    returns:
+        str: The CVE from the tag.
+    """
+    if cve := re.findall(r"CVE-\d{4}-\d{4,7}", string):
+        return cve[0]
+    return None

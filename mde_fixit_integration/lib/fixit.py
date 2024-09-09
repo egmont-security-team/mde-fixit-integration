@@ -4,7 +4,7 @@ All functions and classes related to FixIt 4me.
 
 import logging
 import re
-from typing import Optional
+from typing import Any, Optional
 
 import requests
 from tenacity import (
@@ -104,28 +104,7 @@ class FixItClient:
             timeout=120,
         )
 
-        custom_dimensions = {
-            "base_url": self.base_url,
-            "X-4me-Account": self.fixit_4me_account,
-            "status": res.status_code,
-            "body": res.content,
-        }
-
-        match res.status_code:
-            case 401:
-                logger.error(
-                    "Unauthorized for fetching the FixIt 4me request status",
-                    extra=custom_dimensions,
-                )
-                return None
-            case 404:
-                logger.error(
-                    f'Couldn\'t find the FixIt request with ID "#{request_id}" in the 4me account.',
-                    extra=custom_dimensions,
-                )
-                return None
-            case _:
-                res.raise_for_status()
+        res.raise_for_status()
 
         json = res.json()
 
@@ -143,7 +122,7 @@ class FixItClient:
         self,
         subject: str,
         **kwargs,
-    ) -> Optional[dict]:
+    ) -> Optional[Any]:
         """
         Create a FixIt request in the FixIt 4me account.
 
@@ -154,7 +133,7 @@ class FixItClient:
                 dict: The other parameters to pass to the FixIt 4me API.
 
         returns:
-            str: The JSON response of the created request.
+            dict: The JSON response of the created request.
         """
         payload = {"subject": subject}
 
@@ -170,35 +149,53 @@ class FixItClient:
             timeout=300,
         )
 
-        custom_dimensions = {
-            "base_url": self.base_url,
-            "X-4me-Account": self.fixit_4me_account,
-            "status": res.status_code,
-            "payload": str(payload),
-            "body": res.content,
-        }
-
-        match res.status_code:
-            case 401:
-                logger.error(
-                    "Unauthorized for creating the FixIt 4me request.",
-                    extra=custom_dimensions,
-                )
-                return None
-            case 404:
-                logger.error(
-                    "Couldn't find the FixIt 4me template.",
-                    extra=custom_dimensions,
-                )
-                return None
-            case 422:
-                logger.error(res.content)
-                logger.error(
-                    "Invalid request for creating the FixIt 4me request.",
-                    extra=custom_dimensions,
-                )
-                return None
-            case _:
-                res.raise_for_status()
+        res.raise_for_status()
 
         return res.json()
+
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=4),
+        retry=retry_if_exception_type(requests.HTTPError),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        retry_error_callback=lambda _: None,
+        reraise=True,
+    )
+    def list_requests(self, query_filter: Optional[str] = None) -> Optional[list]:
+        """
+        Returns a list of all FixIt requests in the FixIt 4me account.
+
+        params:
+            query_filter:
+                str: The query filter to apply to the request.
+        
+        returns:
+            list: The list of FixIt requests.
+            None: None if the requests couldn't be retrived
+        """
+        all_requests = []
+
+        query_filter = f"?{query_filter}" if query_filter else ""
+        url = f"{self.base_url}/requests/open{query_filter}"
+
+        while url:
+            res = requests.get(
+                url,
+                headers={
+                    "X-4me-Account": self.fixit_4me_account,
+                    "Authorization": f"Bearer {self.api_key}",
+                },
+                timeout=300,
+            )
+
+            res.raise_for_status()
+
+            all_requests.extend(res.json())
+
+            url = next((
+                link["url"] for link in
+                requests.utils.parse_header_links(res.headers.get("Link") or "")
+                if link["rel"] == "next"
+            ), None)
+
+        return all_requests
