@@ -42,13 +42,6 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "example" {
     action_groups = [azurerm_monitor_action_group.fa_errors.id]
   }
 
-  identity {
-    type = "UserAssigned"
-    identity_ids = [
-      azurerm_user_assigned_identity.app.id,
-    ]
-  }
-
   lifecycle {
     ignore_changes = [
       tags,
