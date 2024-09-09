@@ -185,7 +185,6 @@ class MDEClient:
         device: MDEDevice,
         tag: str,
         action: Literal["Add", "Remove"],
-        sleep: Optional[float] = None,
     ) -> Optional[bool]:
         """
         Alters a tag for a given device using Microsoft Defender for Endpoint.
@@ -214,12 +213,17 @@ class MDEClient:
             timeout=300,
         )
 
+        if delay_str := res.headers.get("Retry-After"):
+            # Add 4 seconds to the delay to make sure we
+            # don't hit the limit immediately after.
+            delay = int(delay_str) + 4
+            logger.info(f"The request was rate limited. Retrying in {delay} seconds.")
+            time.sleep(delay)
+            self.alter_device_tag(device, tag, action)
+
         res.raise_for_status()
 
         logger.info(f'Performed action "{action}" with tag "{tag}" on device {device}.')
-
-        if sleep:
-            time.sleep(sleep)
 
         return True
 

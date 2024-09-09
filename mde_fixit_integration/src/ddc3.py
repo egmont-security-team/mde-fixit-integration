@@ -106,7 +106,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
                 logger.debug(f"{device} is not inactive ({device.health}), skipping...")
                 continue
 
-            if mde_client.alter_device_tag(device, "ZZZ", "Add", sleep=1):
+            if mde_client.alter_device_tag(device, "ZZZ", "Add"):
                 duplicate_devices_tagged += 1
             requests_sent += 1
 
