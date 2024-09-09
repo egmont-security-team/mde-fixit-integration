@@ -81,15 +81,6 @@ resource "azurerm_key_vault" "stag" {
     ]
   }
 
-  access_policy {
-    tenant_id = azurerm_user_assigned_identity.app.tenant_id
-    object_id = azurerm_user_assigned_identity.app.principal_id
-
-    secret_permissions = [
-      "Get",
-    ]
-  }
-
   lifecycle {
     ignore_changes = [
       tags,
