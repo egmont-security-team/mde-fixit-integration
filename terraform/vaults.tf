@@ -1,7 +1,7 @@
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_key_vault" "prod" {
-  name                = "${substr(local.repository_name, 0, 13)}-kv-prod"
+  name                = "${local.repository_name_short}-kv-prod"
   location            = azurerm_resource_group.app.location
   resource_group_name = azurerm_resource_group.app.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
@@ -29,8 +29,8 @@ resource "azurerm_key_vault" "prod" {
   }
 
   access_policy {
-    tenant_id = azurerm_user_assigned_identity.app_mi.tenant_id
-    object_id = azurerm_user_assigned_identity.app_mi.principal_id
+    tenant_id = azurerm_user_assigned_identity.app.tenant_id
+    object_id = azurerm_user_assigned_identity.app.principal_id
 
     secret_permissions = [
       "Get",
@@ -45,7 +45,7 @@ resource "azurerm_key_vault" "prod" {
 }
 
 resource "azurerm_key_vault" "stag" {
-  name                = "${substr(local.repository_name, 0, 13)}-kv-stag"
+  name                = "${local.repository_name_short}-kv-stag"
   location            = azurerm_resource_group.app.location
   resource_group_name = azurerm_resource_group.app.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
@@ -73,8 +73,8 @@ resource "azurerm_key_vault" "stag" {
   }
 
   access_policy {
-    tenant_id = azurerm_user_assigned_identity.app_mi.tenant_id
-    object_id = azurerm_user_assigned_identity.app_mi.principal_id
+    tenant_id = azurerm_user_assigned_identity.app.tenant_id
+    object_id = azurerm_user_assigned_identity.app.principal_id
 
     secret_permissions = [
       "Get",
@@ -82,8 +82,8 @@ resource "azurerm_key_vault" "stag" {
   }
 
   access_policy {
-    tenant_id = azurerm_user_assigned_identity.app_mi.tenant_id
-    object_id = azurerm_user_assigned_identity.app_mi.principal_id
+    tenant_id = azurerm_user_assigned_identity.app.tenant_id
+    object_id = azurerm_user_assigned_identity.app.principal_id
 
     secret_permissions = [
       "Get",

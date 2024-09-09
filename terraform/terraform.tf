@@ -34,7 +34,8 @@ provider "github" {
 }
 
 locals {
-  location            = "West Europe"
-  github_organization = "egmont-security-team"
-  repository_name     = "mde-fixit-integration"
+  location              = "West Europe"
+  github_organization   = "egmont-security-team"
+  repository_name       = "mde-fixit-integration"
+  repository_name_short = "mde-fixit-int"
 }
