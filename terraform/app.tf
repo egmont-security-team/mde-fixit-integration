@@ -15,7 +15,7 @@ resource "azurerm_resource_group" "app" {
   }
 }
 
-resource "azurerm_user_assigned_identity" "app_mi" {
+resource "azurerm_user_assigned_identity" "app" {
   name                = "${local.repository_name}-app-mi"
   resource_group_name = azurerm_resource_group.app.name
   location            = azurerm_resource_group.app.location
@@ -86,7 +86,7 @@ resource "azurerm_linux_function_app" "app" {
   identity {
     type = "UserAssigned"
     identity_ids = [
-      azurerm_user_assigned_identity.app_mi.id
+      azurerm_user_assigned_identity.app.id
     ]
   }
 
@@ -111,7 +111,7 @@ resource "azurerm_linux_function_app" "app" {
 }
 
 resource "azurerm_linux_function_app_slot" "stag" {
-  name                        = "stag"
+  name                        = "staging"
   function_app_id             = azurerm_linux_function_app.app.id
   storage_account_name        = azurerm_storage_account.app_state.name
   storage_account_access_key  = azurerm_storage_account.app_state.primary_access_key
@@ -136,7 +136,7 @@ resource "azurerm_linux_function_app_slot" "stag" {
   identity {
     type = "UserAssigned"
     identity_ids = [
-      azurerm_user_assigned_identity.app_mi.id
+      azurerm_user_assigned_identity.app.id
     ]
   }
 
