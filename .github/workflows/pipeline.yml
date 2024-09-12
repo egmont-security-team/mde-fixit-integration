@@ -18,6 +18,7 @@ jobs:
     secrets: inherit
   
   lint-and-test:
+    needs: [prepare-pipeline]
     uses: "./.github/workflows/lint-and-test.yml"
     secrets: inherit
 
