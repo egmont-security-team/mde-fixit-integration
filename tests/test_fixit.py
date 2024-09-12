@@ -2,7 +2,7 @@
 This module contains tests for the FixItClient class.
 """
 
-from lib.fixit import FixItClient
+from mde_fixit_integration.lib.fixit import FixItClient
 
 
 def test_extract_id():

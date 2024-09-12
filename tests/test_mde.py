@@ -3,7 +3,7 @@ This module contains tests for the MDEDevice class.
 """
 
 from datetime import UTC, datetime
-from lib.mde import MDEDevice
+from mde_fixit_integration.lib.mde import MDEDevice
 
 
 def get_devices() -> list[MDEDevice]:
