@@ -13,21 +13,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  prepare:
+  prepare-pipeline:
     uses: "./.github/workflows/prepare-pipeline.yml"
     secrets: inherit
+  
+  lint-and-test:
+    uses: "./.github/workflows/lint-and-test.yml"
+    secrets: inherit
 
-  build:
+  build-and-upload:
     uses: "./.github/workflows/build-and-upload.yml"
-    needs: [prepare]
+    needs: [prepare-pipeline, lint-and-test]
     secrets: inherit
     with:
-      PYTHON_VERSION: ${{ needs.prepare.outputs.python_version }}
+      PYTHON_VERSION: ${{ needs.prepare-pipeline.outputs.python_version }}
 
   deploy:
     uses: "./.github/workflows/deploy-fa.yml"
-    needs: [prepare, build]
+    needs: [prepare-pipeline, build-and-upload]
     secrets: inherit
     with:
-      DEPLOY_ENV: ${{ needs.prepare.outputs.deploy_env }}
+      DEPLOY_ENV: ${{ needs.prepare-pipeline.outputs.deploy_env }}
     

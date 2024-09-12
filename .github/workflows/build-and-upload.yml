@@ -1,4 +1,4 @@
-name: Build Azure Function artifact 
+name: Build and upload Azure Function artifact 
 
 on:
   workflow_call:
