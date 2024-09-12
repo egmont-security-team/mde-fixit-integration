@@ -3,7 +3,7 @@ name: Build Azure Function artifact
 on:
   workflow_call:
     inputs:
-      PYTHON_VERSION:
+      python_version:
         description: The python version to use
         required: true
         type: string
@@ -19,7 +19,7 @@ jobs:
       - name: Setup Python version
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.PYTHON_VERSION }}
+          python-version: ${{ inputs.python_version }}
 
       - name: Create and start virtual environment
         run: |
@@ -30,7 +30,7 @@ jobs:
         run: pip install --target="./.python_packages/lib/site-packages" -e . 
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./* ./.python_packages !README.md -r
+        run: zip release.zip ./* ./.python_packages !README.md !terraform -r
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4

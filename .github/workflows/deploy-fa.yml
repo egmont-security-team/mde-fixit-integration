@@ -30,9 +30,6 @@ jobs:
         
       - name: Unzip artifact for deployment
         run: unzip release.zip     
-
-      - name: Display structure of downloaded files
-        run: ls -Ra
         
       - name: Login to Azure
         uses: azure/login@v2

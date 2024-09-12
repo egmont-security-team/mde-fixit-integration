@@ -3,9 +3,13 @@ name: Prepare pipeline
 on:
   workflow_call:
     outputs:
-      DEPLOY_ENV:
+      deploy_env:
         description: Deployment environment 
         value: ${{ jobs.prepare-pipeline.outputs.DEPLOY_ENV }}
+      
+      python_version:
+        description: Python version
+        value: ${{ jobs.prepare-pipeline.outputs.PYTHON_VERSION }}
       
 jobs:
   prepare-pipeline:
@@ -13,13 +17,26 @@ jobs:
 
       outputs:
         DEPLOY_ENV: ${{ steps.deploy-env.outputs.DEPLOY_ENV }}
+        PYTHON_VERSION: ${{ steps.python-version.outputs.PYTHON_VERSION }}
 
       steps:
         - name: Checkout repository
           uses: actions/checkout@v4
 
+        - name: Set Python version
+          id: python-version
+          run: |
+            if [[ -f ".python-version" ]]; then
+                PYTHON_VERSION=$(cat .python-version)
+            else
+              echo "Missing \".python-version\" file"
+              exit 1
+            fi
+            echo "PYTHON_VERSION=$PYTHON_VERSION"
+            echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_OUTPUT
+
         - name: Set deployment variable 
-          id: deploy-env
+          id: deploy-env 
           env:
             BRANCH: ${{ github.ref_name }}
           run: |
@@ -32,13 +49,18 @@ jobs:
             fi
             echo "DEPLOY_ENV=$DEPLOY_ENV"
             echo "DEPLOY_ENV=$DEPLOY_ENV" >> $GITHUB_OUTPUT
-
+          
         - name: Write prepare summary
           env:
+            PYTHON_VERSION: ${{ steps.python-version.outputs.PYTHON_VERSION }}
             DEPLOY_ENV: ${{ steps.deploy-env.outputs.DEPLOY_ENV }}
           run: |
             echo "### Prepare pipeline:               
             <table>
+              <tr>
+                <td>🐍 Python version</td>
+                <td>$PYTHON_VERSION</td>
+              </tr>
               <tr>
                 <td>🎯 Deploy env</td>
                 <td>$DEPLOY_ENV</td>
