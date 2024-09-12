@@ -73,9 +73,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
         logger.info("Task won't continue as there is no devices to process.")
         return
 
-    logger.info(
-        'Start adding "ZZZ" tag to duplicate devices in the Microsoft Defender portal.'
-    )
+    logger.info('Start adding "ZZZ" tag to duplicate devices in the Microsoft Defender portal.')
 
     device_dict: DeviceDict = create_device_dict(devices)
 
@@ -87,11 +85,11 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     for devices in device_dict.values():
         for device in devices:
             if len(list(filter(is_zzz_tag, device.tags))) > 0:
-                logger.debug(f"{device} already tagged or not inactive, skipping...")
+                logger.debug(f"{device} already tagged or is not inactive. Skipping...")
                 continue
 
             if device.health != "Inactive":
-                logger.debug(f"{device} is not inactive ({device.health}), skipping...")
+                logger.debug(f"{device} is not inactive ({device.health}). Skipping...")
                 continue
 
             if mde_client.alter_device_tag(device, "ZZZ", "Add"):
@@ -124,7 +122,7 @@ def create_device_dict(devices: list[MDEDevice]) -> DeviceDict:
             list[MDEDevice]: The list of MDE devices.
 
     returns:
-        dict[str, MDEDevice]: The dictionary containing all the MDE devices.
+        DeviceDict: The dictionary containing all the MDE devices.
     """
     device_dict: DeviceDict = {}
 
@@ -151,7 +149,7 @@ def remove_non_duplicates(device_dict: DeviceDict):
 
     params:
         device_dict:
-            dict[str, MDEDevice]: The dictionary containing the devices.
+            DeviceDict: The dictionary containing the devices.
     """
     for device_name, devices in list(device_dict.items()):
         if len(devices) == 1:
