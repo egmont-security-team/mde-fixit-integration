@@ -5,19 +5,19 @@ on:
     outputs:
       deploy_env:
         description: Deployment environment 
-        value: ${{ jobs.prepare-pipeline.outputs.DEPLOY_ENV }}
+        value: ${{ jobs.prepare-pipeline.outputs.deploy_env }}
       
       python_version:
         description: Python version
-        value: ${{ jobs.prepare-pipeline.outputs.PYTHON_VERSION }}
+        value: ${{ jobs.prepare-pipeline.outputs.python_version }}
       
 jobs:
   prepare-pipeline:
       runs-on: ubuntu-latest
 
       outputs:
-        DEPLOY_ENV: ${{ steps.deploy-env.outputs.DEPLOY_ENV }}
-        PYTHON_VERSION: ${{ steps.python-version.outputs.PYTHON_VERSION }}
+        deploy_env: ${{ steps.deploy-env.outputs.DEPLOY_ENV }}
+        python_version: ${{ steps.python-version.outputs.PYTHON_VERSION }}
 
       steps:
         - name: Checkout repository
