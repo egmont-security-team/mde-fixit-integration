@@ -91,6 +91,7 @@ resource "azurerm_linux_function_app" "app" {
   }
 
   app_settings = {
+    "AZURE_CLIENT_ID" : azurerm_user_assigned_identity.app.client_id,
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Production",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
     "WEBSITE_RUN_FROM_PACKAGE" : 1,
@@ -142,6 +143,7 @@ resource "azurerm_linux_function_app_slot" "stag" {
   }
 
   app_settings = {
+    "AZURE_CLIENT_ID" : azurerm_user_assigned_identity.app.client_id,
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Staging",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
     "WEBSITE_RUN_FROM_PACKAGE" : 1,
