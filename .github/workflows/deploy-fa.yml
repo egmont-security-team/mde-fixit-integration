@@ -3,7 +3,7 @@ name: Deploy Azure Function to Azure Portal
 on:
   workflow_call:
     inputs:
-      DEPLOY_ENV:
+      deploy_env:
         description: Deployment environment
         required: true
         type: string
@@ -15,9 +15,9 @@ jobs:
   deploy-to-azure:
     runs-on: ubuntu-latest
 
-    if: inputs.DEPLOY_ENV == 'prod' || inputs.DEPLOY_ENV == 'stag'
+    if: inputs.deploy_env == 'prod' || inputs.deploy_env == 'stag'
 
-    environment: ${{ inputs.DEPLOY_ENV }}
+    environment: ${{ inputs.deploy_env }}
 
     permissions:
       id-token: write
@@ -30,9 +30,6 @@ jobs:
         
       - name: Unzip artifact for deployment
         run: unzip release.zip     
-
-      - name: Display structure of downloaded files
-        run: ls -Ra
         
       - name: Login to Azure
         uses: azure/login@v2
@@ -44,9 +41,9 @@ jobs:
       - name: Get deployment slot
         id: get-deployment-slot
         run: |
-          if [[ ${{ inputs.DEPLOY_ENV }} == 'prod' ]]; then
+          if [[ ${{ inputs.deploy_env }} == 'prod' ]]; then
             echo "DEPLOY_SLOT=production" >> $GITHUB_OUTPUT
-          elif [[ ${{ inputs.DEPLOY_ENV }} == 'stag' ]]; then
+          elif [[ ${{ inputs.deploy_env }} == 'stag' ]]; then
             echo "DEPLOY_SLOT=staging" >> $GITHUB_OUTPUT
           fi
 

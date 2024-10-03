@@ -44,18 +44,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     logger.info("Started the CVE Automation task.")
 
-    try:
-        key_vault_name = os.environ["KEY_VAULT_NAME"]
-    except KeyError:
-        logger.critical(
-            """
-            Did not find valid value for environment variable \"KEY_VAULT_NAME\".
-            Please set this in \"local.settings.json\" or in the \"application settings\" in Azure.
-            """
-        )
-        return
-
-    create_environment(key_vault_name, DefaultAzureCredential())
+    create_environment(DefaultAzureCredential())
 
     mde_client = MDEClient(
         os.environ["AZURE_MDE_TENANT"],
@@ -95,7 +84,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
 
     total_fixit_tickets_created = multi_fixit_tickets_created + single_fixit_tickets_created
 
-    logger.info(f"Created a total of {total_fixit_tickets_created} FixIt-tickets (multi={multi_fixit_tickets_created}, single={single_fixit_tickets_created})")
+    logger.info(f"Created a total of {total_fixit_tickets_created} Fix-It tickets (multi={multi_fixit_tickets_created}, single={single_fixit_tickets_created})")
 
 
 def proccess_single_devices(

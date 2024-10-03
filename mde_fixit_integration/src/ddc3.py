@@ -45,18 +45,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     logger.info("Started the Data Defender Cleanup task 3.")
 
-    try:
-        key_vault_name: str = os.environ["KEY_VAULT_NAME"]
-    except KeyError:
-        logger.critical(
-            """
-            Did not find environment variable \"KEY_VAULT_NAME\". Please set this 
-            in \"local.settings.json\" or in the application settings in Azure.
-            """
-        )
-        return
-
-    create_environment(key_vault_name, DefaultAzureCredential())
+    create_environment(DefaultAzureCredential())
 
     mde_client = MDEClient(
         os.environ["AZURE_MDE_TENANT"],
