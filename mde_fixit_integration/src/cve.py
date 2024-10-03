@@ -26,7 +26,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -225,20 +225,22 @@ def proccess_multiple_devices(
 
         logger.info(f"Creating multi ticket for {device}.")
 
-        file_path = create_csv_file(key, vulnerable_devices)
-        fixit_attachment_key = fixit_client.upload_file(file_path)
+        fixit_attachment_key = fixit_client.upload_file(
+            create_csv_file(key, vulnerable_devices)
+        )
 
         cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
         device_count = str(len(vulnerable_devices))
+
         request_config: dict[str, Any] = {
             "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
             "template_id": os.environ["FIXIT_MULTI_TEMPLATE_ID"],
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},
                 {"id": "cve_id", "value": vulnerability.cve_id},
-                {"id": "cve_description", "value": vulnerability.description or ""},
-                {"id": "software_name", "value": vulnerability.software_name or ""},
-                {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
+                {"id": "cve_description", "value": vulnerability.description},
+                {"id": "software_name", "value": vulnerability.software_name},
+                {"id": "software_vendor", "value": vulnerability.software_vendor},
                 {"id": "devices_count", "value": f"{device_count} affected devices"},
             ],
             "internal_note": f"Attached is a list of {device_count} devices affected by this vulnerability.",
