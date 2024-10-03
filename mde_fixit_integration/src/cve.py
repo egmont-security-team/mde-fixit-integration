@@ -4,9 +4,11 @@ the CVE related stuff. This means it is creating FixIt tickets
 for devices hit by certain CVE.
 """
 
+import csv
 import logging
-from datetime import UTC, datetime, timedelta
 import os
+import tempfile
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import azure.functions as func
@@ -116,7 +118,9 @@ def proccess_single_devices(
         logger.info(f"Creating single ticket for {device}.")
 
         users = mde_client.get_device_users(device)
-        recommendations = mde_client.get_device_recommendations(device, odata_filter="remediationType eq 'Update'")
+        recommendations = mde_client.get_device_recommendations(
+            device, odata_filter="remediationType eq 'Update'"
+        )
 
         cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
         device_page = f"https://security.microsoft.com/machines/v2/{device.uuid}/overview"
@@ -189,13 +193,15 @@ def proccess_multiple_devices(
     """
     multi_fixit_tickets: int = 0
 
-    open_multi_requests = fixit_client.list_requests(query_filter=f"status=assigned&template={os.environ['FIXIT_MULTI_TEMPLATE_ID']}")
+    open_multi_requests = fixit_client.list_requests(
+        query_filter=f"status=assigned&template={os.environ['FIXIT_MULTI_TEMPLATE_ID']}"
+    )
 
     if open_multi_requests is None:
         logger.error("Failed to get open FixIt requests. Skipping multi ticket creation.")
         return 0
 
-    for vulnerability in multi_vulnerable_devices.values():
+    for key, vulnerability in multi_vulnerable_devices.items():
         vulnerable_devices = []
 
         if any(get_cve_from_str(req["subject"]) == vulnerability.cve_id for req in open_multi_requests):
@@ -220,9 +226,7 @@ def proccess_multiple_devices(
         logger.info(f"Creating multi ticket for {device}.")
 
         cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
-
         device_count = str(len(vulnerable_devices))
-
         request_config: dict[str, Any] = {
             "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
             "template_id": os.environ["FIXIT_MULTI_TEMPLATE_ID"],
@@ -232,14 +236,25 @@ def proccess_multiple_devices(
                 {"id": "cve_description", "value": vulnerability.description or ""},
                 {"id": "software_name", "value": vulnerability.software_name or ""},
                 {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
-                {"id": "device_count", "value": f"{device_count} affected devices"},
+                {"id": "devices_count", "value": f"{device_count} affected devices"},
             ],
         }
 
         if vulnerability.is_server_software():
-            request_config["team"] = os.environ["FIXIT_CAD_TEAM_ID"],
+            request_config["team"] = os.environ["FIXIT_CAD_TEAM_ID"]
         else:
-            request_config["team"] = os.environ["FIXIT_MW_TEAM_ID"],
+            request_config["team"] = os.environ["FIXIT_MW_TEAM_ID"]
+
+        file_path = create_csv_file(key, vulnerable_devices)
+        fixit_attachment_key = fixit_client.upload_file(file_path)
+        request_config["custom_fields"].append(
+            {
+                "id": "devices_csv",
+                "value": [{
+                    "key": fixit_attachment_key,
+                }]
+            }
+        )
 
         fixit_res = fixit_client.create_request(
             f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",
@@ -252,7 +267,7 @@ def proccess_multiple_devices(
 
         multi_fixit_tickets += 1
 
-        fixit_id = fixit_res.get("id")
+        fixit_id = fixit_res["id"]
         for device in vulnerable_devices:
             if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
                 logger.error(f'Created multi FixIt ticket "#{fixit_id}" but failed to give {device} devices a tag.')
@@ -306,8 +321,13 @@ def get_vulnerable_devices(
 
         threshold = server_threshold if vulnerability.is_server_software() else pc_threshold
         if len(vulnerability.devices) >= threshold:
-            device_key = f"{vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}"
-            multi_vulnerable_devices[device_key] = vulnerability
+            vulnerability_key = f"{vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}"
+
+            if multi_vulnerable_devices.get(vulnerability_key):
+                logger.error("There is already a multi device vulnerability with the same key. Skipping..")
+                continue
+
+            multi_vulnerable_devices[vulnerability_key] = vulnerability
             continue
 
         for device_uuid in vulnerability.devices:
@@ -349,8 +369,8 @@ def should_skip_device(
     returns:
         bool: True if the device should be skipped.
     """
-    if check_first_seen and not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):
-        logger.debug(f"Skipping {device} since it has not been in registered for more than 7 days.")
+    if check_first_seen and not device.first_seen < datetime.now(UTC) - timedelta(days=7):
+        logger.debug(f"Skipping {device} since it has not been registered for more than 7 days.")
         return True
 
     if check_should_skip and device.should_skip("CVE", cve=cve_id):
@@ -370,3 +390,45 @@ def should_skip_device(
         return True
 
     return False
+
+
+def create_csv_file(file_name: str, devices: list[MDEDevice]) -> str:
+    """
+    Creates a CSV file with the given data.
+
+    This will add the mimetype to the file and return the path to the file.
+
+    params:
+        file_name:
+            str: The name of the file to create.
+        devices:
+            list[MDEDevice]: The devices to write to the file.
+
+    returns:
+        str: The key of the file in the FixIt system.
+    """
+    target_dir = os.path.join(tempfile.gettempdir(), "mde_fixit_integration")
+    os.makedirs(target_dir, exist_ok=True)
+
+    if not file_name.endswith(".csv"):
+        file_name += ".csv"
+    file_path = os.path.join(target_dir, file_name)
+
+    with open(file_path, "w+", encoding="utf8") as file:
+        writer = csv.writer(file)
+
+        keys_to_save = [
+            "uuid",
+            "name",
+            "health",
+            "os",
+            "onboarding_status",
+            "first_seen"
+        ]
+
+        writer.writerow(keys_to_save)
+
+        for device in devices:
+            writer.writerow([getattr(device, key) for key in keys_to_save])
+
+    return file_path

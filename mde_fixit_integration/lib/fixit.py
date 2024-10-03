@@ -7,6 +7,7 @@ import re
 from typing import Any, Optional
 
 import requests
+import xmltodict
 from tenacity import (
     before_sleep_log,
     retry,
@@ -161,14 +162,14 @@ class FixItClient:
         retry_error_callback=lambda _: None,
         reraise=True,
     )
-    def list_requests(self, query_filter: Optional[str] = None) -> Optional[list]:
+    def list_requests(self, query_filter: Optional[str] = None) -> Optional[list[Any]]:
         """
         Returns a list of all FixIt requests in the FixIt 4me account.
 
         params:
             query_filter:
                 str: The query filter to apply to the request.
-        
+
         returns:
             list: The list of FixIt requests.
             None: None if the requests couldn't be retrived
@@ -192,10 +193,73 @@ class FixItClient:
 
             all_requests.extend(res.json())
 
-            url = next((
-                link["url"] for link in
-                requests.utils.parse_header_links(res.headers.get("Link") or "")
-                if link["rel"] == "next"
-            ), None)
+            url = next(
+                (
+                    link["url"]
+                    for link in requests.utils.parse_header_links(
+                        res.headers.get("Link") or ""
+                    )
+                    if link["rel"] == "next"
+                ),
+                None,
+            )
 
         return all_requests
+
+    def get_attachments_storage(self) -> Any:
+        """
+        Gets the storage information for the FixIt attachments.
+
+        returns:
+            Any: The storage information for the FixIt attachments.
+        """
+        res = requests.get(
+            f"{self.base_url}/attachments/storage",
+            headers={
+                "X-4me-Account": self.fixit_4me_account,
+                "Authorization": f"Bearer {self.api_key}",
+            },
+            timeout=300,
+        )
+
+        res.raise_for_status()
+
+        return res.json()
+
+    def upload_file(self, file_path: str) -> Optional[str]:
+        """
+        Uploads a file to the FixIt storage.
+
+        params:
+            file:
+                str: The file to upload.
+
+        returns:
+            str: The key of the uploaded file.
+        """
+        with open(file_path, "rb") as file:
+            storage = self.get_attachments_storage()
+
+            file_name = file_path.split("/")[-1]
+            res = requests.post(
+                storage["upload_uri"],
+                files={
+                    "Content-Type": (None, "text/csv"),
+                    "acl": (None, storage["s3"]["acl"]),
+                    "key": (None, storage["s3"]["key"]),
+                    "policy": (None, storage["s3"]["policy"]),
+                    "success_action_status": (None, storage["s3"]["success_action_status"]),
+                    "x-amz-algorithm": (None, storage["s3"]["x-amz-algorithm"]),
+                    "x-amz-credential": (None, storage["s3"]["x-amz-credential"]),
+                    "x-amz-date": (None, storage["s3"]["x-amz-date"]),
+                    "x-amz-server-side-encryption": (None, storage["s3"]["x-amz-server-side-encryption"]),
+                    "x-amz-signature": (None, storage["s3"]["x-amz-signature"]),
+                    "file": (file_name, file, "text/csv"),
+                },
+                timeout=300,
+            )
+
+            res.raise_for_status()
+
+            json = xmltodict.parse(res.content)
+            return json["PostResponse"]["Key"]

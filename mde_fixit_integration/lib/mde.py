@@ -4,10 +4,11 @@ All functions and classes related to Microsoft Defender for Endpoint.
 
 from __future__ import annotations
 
-from datetime import datetime
 import logging
 import re
 import time
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal, Optional
 
 import requests
@@ -117,7 +118,9 @@ class MDEClient:
         devices: list[MDEDevice] = []
 
         odata_filter = f"?$filter={odata_filter}" or ""
-        devices_url = f"https://api.securitycenter.microsoft.com/api/machines{odata_filter}"
+        devices_url = (
+            f"https://api.securitycenter.microsoft.com/api/machines{odata_filter}"
+        )
 
         while devices_url:
             res = requests.get(
@@ -132,7 +135,9 @@ class MDEClient:
 
             # Get the new devices from the request.
             new_devices = json["value"]
-            logger.debug(f"Fetched {len(new_devices)} new devices from Microsoft Defender for Endpoint.")
+            logger.debug(
+                f"Fetched {len(new_devices)} new devices from Microsoft Defender for Endpoint."
+            )
 
             # Turn the JSON payloads from MDE into MDEDevice objects.
             for payload in new_devices:
@@ -164,7 +169,9 @@ class MDEClient:
             # This URL given here can be used to fetch the next devices.
             devices_url = json.get("@odata.nextLink")
 
-        logger.info(f"Fetched a total of {len(devices)} devices from Microsoft Defender for Endpoint.")
+        logger.info(
+            f"Fetched a total of {len(devices)} devices from Microsoft Defender for Endpoint."
+        )
 
         return devices
 
@@ -289,14 +296,18 @@ class MDEClient:
                         )
                     )
                 except KeyError:
-                    logger.error(f'Couldn\'t create a new "MDEVulnerability" from the payload {payload}.')
+                    logger.error(
+                        f'Couldn\'t create a new "MDEVulnerability" from the payload {payload}.'
+                    )
 
             # The Microsoft Defender API has a limit of 8k rows per request.
             # In case this URL exists, this means that more rows can be fetched.
             # The URL given here can be used to fetch the next devices.
             cve_url = json.get("@odata.nextLink")
 
-        logger.info(f"Fetched a total of {len(vulnerabilities)} devices from Microsoft Defender for Endpoint.")
+        logger.info(
+            f"Fetched a total of {len(vulnerabilities)} devices from Microsoft Defender for Endpoint."
+        )
 
         return vulnerabilities
 
@@ -339,7 +350,9 @@ class MDEClient:
 
             users_url = json.get("@odata.nextLink")
 
-        logger.info(f"Fetched a total of {len(users)} users from Microsoft Defender for Endpoint.")
+        logger.info(
+            f"Fetched a total of {len(users)} users from Microsoft Defender for Endpoint."
+        )
 
         return users
 
@@ -352,7 +365,7 @@ class MDEClient:
     def get_device_recommendations(
         self,
         device: MDEDevice,
-        odata_filter:Optional[str]=None,
+        odata_filter: Optional[str] = None,
     ) -> list[str]:
         """
         Returns a list of recommendations for a given device.
@@ -373,7 +386,9 @@ class MDEClient:
         recommendations = []
 
         odata_filter = f"?$filter={odata_filter}" or ""
-        recommendation_url: str = f"https://api-eu.securitycenter.microsoft.com/api/machines/{device.uuid}/recommendations{odata_filter}"
+        recommendation_url: str = (
+            f"https://api-eu.securitycenter.microsoft.com/api/machines/{device.uuid}/recommendations{odata_filter}"
+        )
 
         while recommendation_url:
             res = requests.get(
@@ -391,11 +406,14 @@ class MDEClient:
 
             recommendation_url = json.get("@odata.nextLink")
 
-        logger.info(f"Fetched a total of {len(recommendations)} recommendation for device {device} from Microsoft Defender for Endpoint.")
+        logger.info(
+            f"Fetched a total of {len(recommendations)} recommendation for device {device} from Microsoft Defender for Endpoint."
+        )
 
         return recommendations
 
 
+@dataclass
 class MDEDevice:
     """
     A class that represents a Microsoft Defender for Endpoint client.
@@ -479,11 +497,10 @@ class MDEDevice:
         returns:
             bool: True if the device is a server.
         """
-        return any(os in self.os.lower() for os in [
-            "server",
-            "redhatenterpriselinux",
-            "ubuntu"
-        ])
+        return any(
+            os in self.os.lower()
+            for os in ["server", "redhatenterpriselinux", "ubuntu"]
+        )
 
     def should_skip(
         self, automation: Literal["DDC2", "DDC3", "CVE"], cve: None | str = None
@@ -509,10 +526,11 @@ class MDEDevice:
             case "DDC3":
                 pattern = re.compile(r"^SKIP-DDC3$")
             case "CVE":
-                pattern = re.compile(
-                    r"^SKIP-CVE(?:-\[(?P<CVE>CVE-\d{4}-\d{4,7})\])?$")
+                pattern = re.compile(r"^SKIP-CVE(?:-\[(?P<CVE>CVE-\d{4}-\d{4,7})\])?$")
             case _:
-                logger.warning(f'''The automation "{automation}" is not recognized. Can\'t peform a valid "should_skip()" check, so we skip the device.''')
+                logger.warning(
+                    f"""The automation "{automation}" is not recognized. Can\'t peform a valid "should_skip()" check, so we skip the device."""
+                )
                 return True
 
         for tag in self.tags:
@@ -529,6 +547,7 @@ class MDEDevice:
         return False
 
 
+@dataclass
 class MDEVulnerability:
     """
     A class that represents a Microsoft Defender for Endpoint vulnerability.

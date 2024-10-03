@@ -8,3 +8,4 @@ azure-keyvault-secrets==4.8.0
 azure-monitor-opentelemetry==1.6.1
 requests==2.32.3
 tenacity==9.0.0
+xmltodict==0.12.0

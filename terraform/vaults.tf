@@ -146,7 +146,7 @@ resource "azurerm_key_vault_secret" "cve_service_instance_id_prod" {
 
 resource "azurerm_key_vault_secret" "cve_sd_team_id_prod" {
   name         = "CVE-SD-Team-ID"
-  value        = ""
+  value        = "8827"
   key_vault_id = azurerm_key_vault.prod.id
 }
 
