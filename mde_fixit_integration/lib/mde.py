@@ -580,7 +580,7 @@ class MDEVulnerability:
         self.software_name = software_name
         self.software_vendor = software_vendor
 
-    def is_sever_software(self) -> bool:
+    def is_server_software(self) -> bool:
         """
         Returns if the software is a server software or not.
 

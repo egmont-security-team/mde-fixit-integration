@@ -236,7 +236,6 @@ def proccess_multiple_devices(
 
         request_config: dict[str, Any] = {
             "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
-            "team": os.environ["FIXIT_MW_TEAM_ID"],
             "template_id": os.environ["FIXIT_MULTI_TEMPLATE_ID"],
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},
@@ -247,6 +246,11 @@ def proccess_multiple_devices(
                 {"id": "device_count", "value": f"{device_count} affected devices"},
             ],
         }
+
+        if vulnerability.is_server_software():
+            request_config["team"] = os.environ["FIXIT_CAD_TEAM_ID"],
+        else:
+            request_config["team"] = os.environ["FIXIT_MW_TEAM_ID"],
 
         fixit_res = fixit_client.create_request(
             f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",
@@ -311,7 +315,7 @@ def get_vulnerable_devices(
             logger.warning(f"Skipping vulnerability {vulnerability} since it has no affected devices.")
             continue
 
-        threshold = server_threshold if vulnerability.is_sever_software() else pc_threshold
+        threshold = server_threshold if vulnerability.is_server_software() else pc_threshold
         if len(vulnerability.devices) >= threshold:
             device_key = f"{vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}"
             multi_vulnerable_devices[device_key] = vulnerability
