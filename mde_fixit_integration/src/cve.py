@@ -26,7 +26,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -225,6 +225,9 @@ def proccess_multiple_devices(
 
         logger.info(f"Creating multi ticket for {device}.")
 
+        file_path = create_csv_file(key, vulnerable_devices)
+        fixit_attachment_key = fixit_client.upload_file(file_path)
+
         cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
         device_count = str(len(vulnerable_devices))
         request_config: dict[str, Any] = {
@@ -238,23 +241,16 @@ def proccess_multiple_devices(
                 {"id": "software_vendor", "value": vulnerability.software_vendor or ""},
                 {"id": "devices_count", "value": f"{device_count} affected devices"},
             ],
+            "internal_note": f"Attached is a list of {device_count} devices affected by this vulnerability.",
+            "internal_note_attachments": [{
+                "key": fixit_attachment_key,
+            }],
         }
 
         if vulnerability.is_server_software():
             request_config["team"] = os.environ["FIXIT_CAD_TEAM_ID"]
         else:
             request_config["team"] = os.environ["FIXIT_MW_TEAM_ID"]
-
-        file_path = create_csv_file(key, vulnerable_devices)
-        fixit_attachment_key = fixit_client.upload_file(file_path)
-        request_config["custom_fields"].append(
-            {
-                "id": "devices_csv",
-                "value": [{
-                    "key": fixit_attachment_key,
-                }]
-            }
-        )
 
         fixit_res = fixit_client.create_request(
             f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",
