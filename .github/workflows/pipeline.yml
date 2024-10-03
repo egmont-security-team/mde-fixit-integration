@@ -21,6 +21,8 @@ jobs:
     needs: [prepare-pipeline]
     uses: "./.github/workflows/lint-and-test.yml"
     secrets: inherit
+    with:
+      python_version: ${{ needs.prepare-pipeline.outputs.python_version }}
 
   build-and-upload:
     uses: "./.github/workflows/build-and-upload.yml"
