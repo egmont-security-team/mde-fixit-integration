@@ -75,11 +75,9 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
         logger.info("Task won't continue as there is no devices to process.")
         return
 
-    logger.info(
-        "Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal."
-    )
+    logger.info("Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal.")
 
-    fetched_requests: dict[str, str] = {}
+    request_status_cache: dict[str, str] = {}
 
     removed_fixit_tags = 0
 
@@ -93,16 +91,14 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
             if not request_id:
                 continue
 
-            if request_id not in fetched_requests:
+            if request_id not in request_status_cache:
                 request_status = fixit_client.get_request_status(request_id)
                 if request_status is None:
-                    logger.error(f"Failed to fetch the status of the FixIt request for {device}.")
+                    logger.warning(f"Failed to fetch the status of the Fix-It request #{request_id} for {device}.")
                     continue
+                request_status_cache[request_id] = request_status
 
-                fetched_requests[request_id] = request_status
-
-            request_status = fetched_requests[request_id]
-
+            request_status = request_status_cache[request_id]
             if request_status == "completed":
                 if mde_client.alter_device_tag(device, tag, "Remove"):
                     removed_fixit_tags += 1

@@ -86,16 +86,16 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         vulnerabilities
     )
 
-    single_fixit_tickets = proccess_single_devices(
+    single_fixit_tickets_created = proccess_single_devices(
         single_vulnerable_devices, devices, mde_client, fixit_client
     )
-    multi_fixit_tickets = proccess_multiple_devices(
+    multi_fixit_tickets_created = proccess_multiple_devices(
         multi_vulnerable_devices, devices, mde_client, fixit_client
     )
 
-    total_fixit_tickets = multi_fixit_tickets + single_fixit_tickets
+    total_fixit_tickets_created = multi_fixit_tickets_created + single_fixit_tickets_created
 
-    logger.info(f"Created a total of {total_fixit_tickets} FixIt-tickets (multi={multi_fixit_tickets}, single={single_fixit_tickets})")
+    logger.info(f"Created a total of {total_fixit_tickets_created} FixIt-tickets (multi={multi_fixit_tickets_created}, single={single_fixit_tickets_created})")
 
 
 def proccess_single_devices(
@@ -118,16 +118,16 @@ def proccess_single_devices(
         device = next((dev for dev in devices if dev.uuid == device_uuid), None)
 
         if not device:
-            logger.warning(f'No device found with UUID="{device_uuid}" for single ticket. Skipping..')
+            logger.info(f'No device found with UUID="{device_uuid}" for single ticket. Skipping..')
             continue
 
         if should_skip_device(device, vulnerability.cve_id):
             continue
 
+        logger.info(f"Creating single ticket for {device}.")
+
         users = mde_client.get_device_users(device)
         recommendations = mde_client.get_device_recommendations(device, odata_filter="remediationType eq 'Update'")
-
-        logger.info(f"Creating single ticket for {device}.")
 
         cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
         device_page = f"https://security.microsoft.com/machines/v2/{device.uuid}/overview"
@@ -145,8 +145,7 @@ def proccess_single_devices(
                 {"id": "device_name", "value": device.name},
                 {"id": "device_uuid", "value": device.uuid},
                 {"id": "device_os", "value": device.os},
-                {"id": "device_users", "value": ", ".join(
-                    users or ["Unknown"])},
+                {"id": "device_users", "value": ", ".join(users or ["Unknown"])},
                 {"id": "recommendations", "value": "\n".join(recommendations)},
             ],
         }
@@ -213,16 +212,12 @@ def proccess_multiple_devices(
         if any(get_cve_from_str(req["subject"]) == vulnerability.cve_id for req in open_multi_requests):
             logger.info(f"Skipping {vulnerability.cve_id} since there is already an open FixIt request for it.")
             continue
-        else:
-            test_str = get_cve_from_str("Security[CVE-2024-38140 - 9.8]: Multiple Vulnerable Devices")
-            logger.warning(f"test - {vulnerability.cve_id} != {test_str}")
-            continue
 
         for device_uuid in vulnerability.devices:
             device = next((dev for dev in devices if dev.uuid == device_uuid), None)
 
             if not device:
-                logger.error(f'No device found with UUID="{device_uuid}" for multi ticket.')
+                logger.info(f'No device found with UUID="{device_uuid}" for multi ticket.')
                 continue
 
             if should_skip_device(device, vulnerability.cve_id, check_fixit_request=False):
@@ -301,6 +296,7 @@ def get_vulnerable_devices(
     single_vulnerable_devices: dict[str, MDEVulnerability] = {}
 
     try:
+        # Check README to understand the difference between these two thresholds.
         pc_threshold = int(os.environ["CVE_PC_THRESHOLD"])
         server_threshold = int(os.environ["CVE_SERVER_THRESHOLD"])
     except KeyError as exception:
@@ -358,7 +354,7 @@ def should_skip_device(
             bool: If the device should be checked for FixIt requests tags.
 
     returns:
-        bool: If the device should be skipped.
+        bool: True if the device should be skipped.
     """
     if check_first_seen and not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):
         logger.debug(f"Skipping {device} since it has not been in registered for more than 7 days.")
@@ -369,7 +365,7 @@ def should_skip_device(
         return True
 
     if check_health and device.health == "Inactive":
-        logger.debug(f'Skipping {device} since its health is "Inactive".')
+        logger.debug(f'Skipping {device} since its health is "{device.health}".')
         return True
 
     if check_onboarding_status and device.onboarding_status != "Onboarded":
