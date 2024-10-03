@@ -23,18 +23,6 @@ jobs:
         - name: Checkout repository
           uses: actions/checkout@v4
 
-        - name: Set Python version
-          id: python-version
-          run: |
-            if [[ -f ".python-version" ]]; then
-                PYTHON_VERSION=$(cat .python-version)
-            else
-              echo "Missing \".python-version\" file"
-              exit 1
-            fi
-            echo "PYTHON_VERSION=$PYTHON_VERSION"
-            echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_OUTPUT
-
         - name: Set deployment variable 
           id: deploy-env 
           env:
@@ -49,6 +37,18 @@ jobs:
             fi
             echo "DEPLOY_ENV=$DEPLOY_ENV"
             echo "DEPLOY_ENV=$DEPLOY_ENV" >> $GITHUB_OUTPUT
+
+        - name: Set Python version
+          id: python-version
+          run: |
+            if [[ -f ".python-version" ]]; then
+                PYTHON_VERSION=$(cat .python-version)
+            else
+              echo "Missing \".python-version\" file"
+              exit 1
+            fi
+            echo "PYTHON_VERSION=$PYTHON_VERSION"
+            echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_OUTPUT
           
         - name: Write prepare summary
           env:

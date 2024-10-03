@@ -27,12 +27,12 @@ jobs:
     needs: [prepare-pipeline, lint-and-test]
     secrets: inherit
     with:
-      PYTHON_VERSION: ${{ needs.prepare-pipeline.outputs.python_version }}
+      python_version: ${{ needs.prepare-pipeline.outputs.python_version }}
 
   deploy:
     uses: "./.github/workflows/deploy-fa.yml"
     needs: [prepare-pipeline, build-and-upload]
     secrets: inherit
     with:
-      DEPLOY_ENV: ${{ needs.prepare-pipeline.outputs.deploy_env }}
+      deploy_env: ${{ needs.prepare-pipeline.outputs.deploy_env }}
     
