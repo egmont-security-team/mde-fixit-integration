@@ -113,6 +113,8 @@ resource "azurerm_linux_function_app" "app" {
     ignore_changes = [
       tags,
       app_settings["WEBSITE_RUN_FROM_PACKAGE"],
+      app_settings["CVE_PC_THRESHOLD"],
+      app_settings["CVE_SERVER_THRESHOLD"],
     ]
   }
 }
@@ -170,6 +172,8 @@ resource "azurerm_linux_function_app_slot" "stag" {
     ignore_changes = [
       tags,
       app_settings["WEBSITE_RUN_FROM_PACKAGE"],
+      app_settings["CVE_PC_THRESHOLD"],
+      app_settings["CVE_SERVER_THRESHOLD"],
     ]
   }
 }
