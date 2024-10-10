@@ -3,7 +3,7 @@
     "logging": {
         "fileLoggingMode": "debugOnly",
         "logLevel": {
-            "default": "None"
+            "default": "Information"
         }
     },
     "extensionBundle": {
