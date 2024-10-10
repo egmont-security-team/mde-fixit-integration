@@ -4,13 +4,6 @@
         "fileLoggingMode": "debugOnly",
         "logLevel": {
             "default": "None"
-        },
-        "applicationInsights": {
-            "samplingSettings": {
-                "isEnabled": true,
-                "excludedTypes": "Request"
-            },
-            "enableLiveMetricsFilters": true
         }
     },
     "extensionBundle": {
