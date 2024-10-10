@@ -16,9 +16,9 @@ if conn := os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
     # https://github.com/Azure/azure-functions-python-worker/issues/1342
 
     # Stop duplicate logs
-    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").handlers.clear()
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.CRITICAL)
     # Stop unwated logs
-    logging.getLogger("azure.monitor.opentelemetry.exporter.export").handlers.clear()
+    logging.getLogger("azure.monitor.opentelemetry.exporter.export").setLevel(logging.WARNING)
 
     configure_azure_monitor(connection_string=conn)
 
