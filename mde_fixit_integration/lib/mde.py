@@ -306,7 +306,7 @@ class MDEClient:
             cve_url = json.get("@odata.nextLink")
 
         logger.info(
-            f"Fetched a total of {len(vulnerabilities)} devices from Microsoft Defender for Endpoint."
+            f"Fetched a total of {len(vulnerabilities)} vulnerabilities from Microsoft Defender for Endpoint."
         )
 
         return vulnerabilities
