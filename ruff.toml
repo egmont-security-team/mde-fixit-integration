@@ -1,0 +1,3 @@
+[lint]
+preview = true
+select = ["PL", "E", "D", "DOC"]
