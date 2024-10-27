@@ -1,8 +1,11 @@
+"""DDC2 Azure function.
+
+This module features the Azure function responsible for handling
+Data Defender Cleanup Task 2. Specifically, it removes FixIt tags
+from devices once their associated requests are completed.
 """
-This module contains the Azure function that takes care of the
-Data Defender cleanup task 2. This means it removes FixIt tags
-from devices where the relative request is completed.
-"""
+
+__copyright__ = "Copyright (C) 2024 Egmont IT"
 
 import logging
 import os
@@ -26,13 +29,15 @@ bp = func.Blueprint()
     run_on_startup=False,
     use_monitor=True,
 )
-def ddc2_automation(myTimer: func.TimerRequest) -> None:
-    """
-    This is the main Azure Function that takes care of the Data Defender Cleanup task 2.
-    For detailed description of what this does refer to the README.md.
+def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
+    """DDC2 automation.
+
+    This is the main Azure function that takes care of the
+    Data Defender Cleanup task 2. For detailed description
+    of what this does refer to the README.md.
 
     Actions:
-        - Removes closed FixIt tags from devices.
+        - Removes tags from devices associated with a closed ticket.
     """
     if myTimer.past_due:
         logger.warning("The timer is past due for DDC2!")
@@ -58,13 +63,11 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
     # SETUP - end
 
     devices = mde_client.get_devices(
-        odata_filter="(computerDnsName ne null) and (isExcluded eq false)"
+        odata_filter="(computerDnsName ne null) and (isExcluded eq false)",
     )
-    if not devices:
-        logger.info("Task won't continue as there is no devices to process.")
+    if not devices or len(devices) < 1:
+        logger.critical("task won't continue as there is no devices to process.")
         return
-
-    logger.info("Start removing FixIt tags that reference a completed request from devices in the Microsoft Defender portal.")
 
     request_status_cache: dict[str, str] = {}
 
@@ -83,13 +86,23 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:
             if request_id not in request_status_cache:
                 request_status = fixit_client.get_request_status(request_id)
                 if request_status is None:
-                    logger.warning(f"Failed to fetch the status of the Fix-It request #{request_id} for {device}.")
+                    logger.warning(
+                        f"failed to fetch the status of the ticket #{request_id}",
+                        extra={
+                            "device": str(device),
+                            "fixit_id": request_id,
+                        },
+                    )
                     continue
                 request_status_cache[request_id] = request_status
 
             request_status = request_status_cache[request_id]
-            if request_status == "completed":
-                if mde_client.alter_device_tag(device, tag, "Remove"):
-                    removed_fixit_tags += 1
+            if request_status != "completed":
+                continue
 
-    logger.info(f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal.")
+            if mde_client.alter_device_tag(device, tag, "Remove"):
+                removed_fixit_tags += 1
+
+    logger.info(
+        f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal.",
+    )

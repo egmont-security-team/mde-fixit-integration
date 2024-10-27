@@ -1,14 +1,10 @@
-"""
-This module contains tests for the FixItClient class.
-"""
+"""Contains tests for the FixItClient class."""
 
 from mde_fixit_integration.lib.fixit import FixItClient
 
 
 def test_extract_id():
-    """
-    Test the FixItClient.extract_id method.
-    """
+    """Test the FixItClient.extract_id method."""
     valid_tags = ["#7502349", "# 758489712", "#      93557821"]
     for tag in valid_tags:
         assert FixItClient.extract_id(tag)

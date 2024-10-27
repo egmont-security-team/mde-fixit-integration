@@ -1,6 +1,4 @@
-"""
-This is the entry point for the Azure Function App.
-"""
+"""Entry point for the Azure Function App."""
 
 import logging
 import os

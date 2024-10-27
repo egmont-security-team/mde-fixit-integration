@@ -1,6 +1,4 @@
-"""
-Entry file for module
-"""
+"""Entry file for module."""
 
 from importlib.metadata import version
 

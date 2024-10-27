@@ -1,9 +1,7 @@
-"""
-Utility functions used by multiple scripts.
-"""
+"""Utility functions used by multiple scripts."""
 
-import os
 import logging
+import os
 import re
 from typing import Optional
 
@@ -14,19 +12,29 @@ logger = logging.getLogger(__name__)
 
 
 def get_secret(
-    secret_client: SecretClient, secret_name: str, env_var: Optional[str] = None
+    secret_client: SecretClient, secret_name: str, env_var: Optional[str] = None,
 ) -> str:
-    """
-    Get a secret from Azure Key Vault.
+    """Get a secret from Azure Key Vault.
 
-    params:
-        secret_client:
-            SecretClient: The client to interact with the Azure Key Vault.
-        secret_name:
-            str: The name of the secret to get.
+    Parameters
+    ----------
+    secret_client : SecretClient
+        The client to interact with the Azure Key Vault.
+    secret_name : str
+        The name of the secret to get.
+    env_var : Optional[str]
+        The name of the environment variable to hold secret.
 
-    returns:
-        str: The value of the secret.
+    Returns
+    -------
+    str
+        The value of the secret.
+
+    Raises
+    ------
+    ValueError
+        If the secret is not found in the key vault.
+
     """
     secret = secret_client.get_secret(secret_name)
 
@@ -40,23 +48,26 @@ def get_secret(
 
 
 def create_environment(credential: DefaultAzureCredential) -> None:
-    """
-    Create the environment variables from the secrets in the key vault.
+    """Create the environment variables from the secrets in the key vault.
 
-    params:
-        key_vault_name:
-            str: The name of the key vault.
-        credential:
-            DefaultAzureCredential: The credential to authenticate with the key vault.
+    Parameters
+    ----------
+    credential : DefaultAzureCredential
+        The credential to authenticate with.
+
     """
     try:
         key_vault_name = os.environ["KEY_VAULT_NAME"]
     except KeyError:
         logger.critical(
             """
-            Did not find valid value for environment variable \"KEY_VAULT_NAME\".
-            Please set this in \"local.settings.json\" or in the \"application settings\" in Azure.
-            """
+            did not find valid value for environment variable \"KEY_VAULT_NAME\";
+            please set this in 
+                \"local.settings.json\"
+            or in
+                \"application settings\"
+            in Azure.
+            """,
         )
         return
 
@@ -83,17 +94,23 @@ def create_environment(credential: DefaultAzureCredential) -> None:
     get_secret(sc, "CVE-SEC-Team-ID", env_var="FIXIT_SEC_TEAM_ID")
     get_secret(sc, "CVE-CAD-Team-ID", env_var="FIXIT_CAD_TEAM_ID")
 
+
 def get_cve_from_str(string: str) -> Optional[str]:
-    """
-    Gets the first CVE from a given string (if it has a prober CVE tag).
-    This uses regular expression to determine if the tag is prober.
+    """Get a CVE from a string.
 
-    params:
-        string:
-            str: The string to extract the CVE from.
+    Gets the first CVE from a given string (if it has a CVE tag).
+    This uses regular expression to find the first CVE tag in the string.
 
-    returns:
-        str: The CVE from the tag.
+    Parameters
+    ----------
+    string : str
+        The string to extract the CVE from.
+
+    Returns
+    -------
+    str
+        The CVE from the tag.
+    
     """
     if cve := re.findall(r"CVE-\d{4}-\d{4,7}", string):
         return cve[0]

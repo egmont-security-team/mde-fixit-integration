@@ -1,9 +1,8 @@
-"""
-All functions and classes related to FixIt 4me.
-"""
+"""All functions and classes related to FixIt Xurrent (4me)."""
 
 import logging
 import re
+from pathlib import Path
 from typing import Any, Optional
 
 import requests
@@ -20,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class FixItClient:
-    """
-    A FixIt client that can interact with the FixIt API.
-    """
+    """A client that can interact with the FixIt API."""
 
     base_url: str
     fixit_4me_account: str
@@ -33,20 +30,18 @@ class FixItClient:
         base_url: str,
         fixit_4me_account: str,
         api_key: str,
-    ):
-        """
-        Create a new FixIt client to interact with the FixIt API.
+    ) -> None:
+        """Create a new client to interact with the FixIt API.
 
-        params:
-            base_url:
-                str: The base URL of the FixIt 4me REST API.
-            fixit_4me_account:
-                str: The FixIt 4me account to use.
-            api_key:
-                str: The API key to use for the FixIt client.
+        Parameters
+        ----------
+        base_url : str
+            The base URL of the FixIt 4me REST API.
+        fixit_4me_account : str
+            The FixIt 4me account to use.
+        api_key : str
+            The API key to use for the FixIt client.
 
-        returns:
-            FixItClient: The FixIt client.
         """
         self.base_url = base_url
         self.fixit_4me_account = fixit_4me_account
@@ -54,18 +49,22 @@ class FixItClient:
 
     @staticmethod
     def extract_id(string: str) -> Optional[str]:
-        """
+        """Extra a request ID from a string.
+
         Gets the FixIt request ID from a given string (if it's a prober FixIt tag).
-        This uses regular expression to determine if the tag is prober.
+        This uses regular expression to find the tag.
 
-        params:
-            string:
-                str: The string to extract the FixIt request ID from.
+        Parameters
+        ----------
+        string : str
+            The string to extract the FixIt request ID from.
 
-        returns:
-            str: The FixIt request ID from the tag.
+        Returns
+        -------
+        str
+            The FixIt request ID from the tag.
+
         """
-
         # If this regular expression does not match, it is not a FixIt tag.
         # This also takes care of human error by checking for spaces between
         # the "#" and the numbers
@@ -83,19 +82,20 @@ class FixItClient:
         retry_error_callback=lambda _: None,
         reraise=True,
     )
-    def get_request_status(self, request_id: str) -> Optional[str]:
+    def get_request_status(self, request_id: str) -> str:
+        """Get the status of a request.
+
+        Parameters
+        ----------
+        request_id : str
+            The request id of the request to check (e.g #9999999).
+
+        Returns
+        -------
+        str
+            The status of the request.
+
         """
-        Gets the status of the FixIt request relative to the request id given.
-
-        params:
-            request_id:
-                str: The request id of the request to check (e.g #9999999).
-
-        returns:
-            str: The status of the request.
-            None: None if the request couldn't be retrived.
-        """
-
         res = requests.get(
             f"{self.base_url}/requests/{request_id}",
             headers={
@@ -123,18 +123,21 @@ class FixItClient:
         self,
         subject: str,
         **kwargs,
-    ) -> Optional[Any]:
-        """
-        Create a FixIt request in the FixIt 4me account.
+    ) -> Any:
+        """Create a request.
 
-        params:
-            subject:
-                str: The subject of the FixIt request.
-            **kwargs:
-                dict: The other parameters to pass to the FixIt 4me API.
+        Parameters
+        ----------
+        subject : str
+            Subject of the request.
+        **kwargs : dict
+            Other parameters to pass to the request.
 
-        returns:
-            dict: The JSON response of the created request.
+        Returns
+        -------
+        any
+            The JSON object of the response.
+
         """
         payload = {"subject": subject}
 
@@ -162,17 +165,19 @@ class FixItClient:
         retry_error_callback=lambda _: None,
         reraise=True,
     )
-    def list_requests(self, query_filter: Optional[str] = None) -> Optional[list[Any]]:
-        """
-        Returns a list of all FixIt requests in the FixIt 4me account.
+    def list_requests(self, query_filter: Optional[str] = None) -> list[Any]:
+        """Get a list of all requests in the account.
 
-        params:
-            query_filter:
-                str: The query filter to apply to the request.
+        Parameters
+        ----------
+        query_filter : str
+            Query filter to apply to the request.
 
-        returns:
-            list: The list of FixIt requests.
-            None: None if the requests couldn't be retrived
+        Returns
+        -------
+        list[Any]
+            The list of requests.
+
         """
         all_requests = []
 
@@ -197,7 +202,7 @@ class FixItClient:
                 (
                     link["url"]
                     for link in requests.utils.parse_header_links(
-                        res.headers.get("Link") or ""
+                        res.headers.get("Link") or "",
                     )
                     if link["rel"] == "next"
                 ),
@@ -207,11 +212,13 @@ class FixItClient:
         return all_requests
 
     def get_attachments_storage(self) -> Any:
-        """
-        Gets the storage information for the FixIt attachments.
+        """Get the attachment storage information.
 
-        returns:
-            Any: The storage information for the FixIt attachments.
+        Returns
+        -------
+        Any
+            The storage information for the FixIt attachments.
+
         """
         res = requests.get(
             f"{self.base_url}/attachments/storage",
@@ -226,34 +233,39 @@ class FixItClient:
 
         return res.json()
 
-    def upload_file(self, file_path: str) -> Optional[str]:
-        """
-        Uploads a file to the FixIt storage.
+    def upload_file(self, file_path: str) -> str:
+        """Upload a file to attachment storage.
 
-        params:
-            file:
-                str: The file to upload.
+        Parameters
+        ----------
+        file_path : str
+            The file to upload.
 
-        returns:
-            str: The key of the uploaded file.
+        Returns
+        -------
+        str
+            The key of the uploaded file.
+
         """
-        with open(file_path, "rb") as file:
+        with Path(file_path).open("rb") as file:
             storage = self.get_attachments_storage()
+            s3 = storage["s3"]
 
             file_name = file_path.split("/")[-1]
+
             res = requests.post(
                 storage["upload_uri"],
                 files={
                     "Content-Type": (None, "text/csv"),
-                    "acl": (None, storage["s3"]["acl"]),
-                    "key": (None, storage["s3"]["key"]),
-                    "policy": (None, storage["s3"]["policy"]),
-                    "success_action_status": (None, storage["s3"]["success_action_status"]),
-                    "x-amz-algorithm": (None, storage["s3"]["x-amz-algorithm"]),
-                    "x-amz-credential": (None, storage["s3"]["x-amz-credential"]),
-                    "x-amz-date": (None, storage["s3"]["x-amz-date"]),
-                    "x-amz-server-side-encryption": (None, storage["s3"]["x-amz-server-side-encryption"]),
-                    "x-amz-signature": (None, storage["s3"]["x-amz-signature"]),
+                    "acl": (None, s3["acl"]),
+                    "key": (None, s3["key"]),
+                    "policy": (None, s3["policy"]),
+                    "success_action_status": (None, s3["success_action_status"]),
+                    "x-amz-algorithm": (None, s3["x-amz-algorithm"]),
+                    "x-amz-credential": (None, s3["x-amz-credential"]),
+                    "x-amz-date": (None, s3["x-amz-date"]),
+                    "x-amz-server-side-encryption": (None, s3["x-amz-server-side-encryption"]),  # noqa: E501
+                    "x-amz-signature": (None, s3["x-amz-signature"]),
                     "file": (file_name, file, "text/csv"),
                 },
                 timeout=300,
@@ -261,5 +273,5 @@ class FixItClient:
 
             res.raise_for_status()
 
-            json = xmltodict.parse(res.content)
-            return json["PostResponse"]["Key"]
+            xml = xmltodict.parse(res.content)
+            return xml["PostResponse"]["Key"]

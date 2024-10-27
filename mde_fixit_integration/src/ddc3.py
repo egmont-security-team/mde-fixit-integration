@@ -1,5 +1,4 @@
-"""
-This module contains the Azure function that takes care of the
+"""This module contains the Azure function that takes care of the
 Data Defender cleanup task 3. This means it cleans up duplicate
 devices by giving them a "ZZZ" tag.
 """
@@ -29,8 +28,7 @@ bp = func.Blueprint()
     use_monitor=True,
 )
 def ddc3_automation(myTimer: func.TimerRequest) -> None:
-    """
-    This is the main Azure Function that takes care of the Data Defender Cleanup task 3.
+    """This is the main Azure Function that takes care of the Data Defender Cleanup task 3.
 
     For a detailed description of what this does refer to the README.md.
 
@@ -56,7 +54,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     # SETUP - end
 
     devices = mde_client.get_devices(
-        odata_filter="(computerDnsName ne null) and (isExcluded eq false)"
+        odata_filter="(computerDnsName ne null) and (isExcluded eq false)",
     )
     if not devices:
         logger.info("Task won't continue as there is no devices to process.")
@@ -88,30 +86,30 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
 
 def is_zzz_tag(tag: str) -> bool:
-    """
-    This returns wether this is a "ZZZ" tag or not.
+    """This returns wether this is a "ZZZ" tag or not.
 
     params:
         tag:
             str: The string that represents the tag.
 
-    returns:
+    Returns:
         bool: True if the tag is a "ZZZ" tag.
+
     """
     return re.fullmatch(r"(?i)^z{3}$", tag) is not None
 
 
 def create_device_dict(devices: list[MDEDevice]) -> DeviceDict:
-    """
-    Creates a dictionary from the given list of devices where each key
+    """Creates a dictionary from the given list of devices where each key
     in the dictionary, is the name of the device.
 
     params:
         devices:
             list[MDEDevice]: The list of MDE devices.
 
-    returns:
+    Returns:
         DeviceDict: The dictionary containing all the MDE devices.
+
     """
     device_dict: DeviceDict = {}
 
@@ -132,8 +130,7 @@ def create_device_dict(devices: list[MDEDevice]) -> DeviceDict:
 
 
 def remove_non_duplicates(device_dict: DeviceDict):
-    """
-    Removes non duplicate devices from a device dictionary. This make sure
+    """Removes non duplicate devices from a device dictionary. This make sure
     that only devices that appear once (by name) is removed from the list.
 
     params:
