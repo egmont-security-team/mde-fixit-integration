@@ -6,7 +6,7 @@ authors = [
     { name = "Kasper Jønsson", email = "daekjo@egmont.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = "~=3.11"
 urls = { Homepage = "https://github.com/egmont-security-team/mde-fixit-integration" }
 dependencies = [
     "azure-functions>=1.21.3",

@@ -418,44 +418,6 @@ class MDEDevice:
     tags: list[str]
     first_seen: datetime
 
-    def __init__(
-        self,
-        uuid: str,
-        name: str,
-        health: str,
-        operating_system: str,
-        onboarding_status: str,
-        tags: list[str],
-        first_seen: datetime,
-    ):
-        """Create a new Microsoft Defender for Endpoint device.
-
-        Parameters
-        ----------
-        uuid : str
-            The UUID of the Microsoft Defender for Endpoint device.
-        name : str
-            The name of the Microsoft Defender for Endpoint device.
-        health : str
-            The health of the Microsoft Defender for Endpoint device.
-        operating_system : str
-            The OS of the Microsoft Defender for Endpoint device.
-        onboarding_status : str
-            The onboarding status of the Microsoft Defender for Endpoint device.
-        tags : list[str]
-            The tags of the Microsoft Defender for Endpoint device.
-        first_seen : datetime
-            The first time the device was seen in Microsoft Defender for Endpoint.
-
-        """
-        self.uuid = uuid
-        self.name = name
-        self.health = health
-        self.os = operating_system
-        self.onboarding_status = onboarding_status
-        self.tags = tags
-        self.first_seen = first_seen
-
     def __str__(self) -> str:
         """Device represented as a string.
 
@@ -490,6 +452,17 @@ class MDEDevice:
 
         """
         return not self.__eq__(other)
+    
+    def __hash__(self):
+        """Get a hash of the device.
+        
+        Returns
+        -------
+        int
+            The hash of the device
+
+        """
+        return hash(self.uuid)
 
     def is_server(self) -> bool:
         """If the device is a server or not.
@@ -575,40 +548,6 @@ class MDEVulnerability:
     software_name: str
     software_vendor: str
 
-    def __init__(
-        self,
-        cve_id: str,
-        cve_score: int,
-        devices: list[str],
-        description: str,
-        software_name: str,
-        software_vendor: str,
-    ):
-        """Create a new Microsoft Defender for Endpoint vulnerability.
-
-        Parameters
-        ----------
-        cve_id : str
-            The UUID of the Microsoft Defender for Endpoint vulnerability.
-        cve_score : int
-            The score of the vulnerability.
-        description : str
-            The vulnerability description.
-        devices : list[str]
-            A list of device UUIDs hit by the vulnerability.
-        software_name : str
-            The name of the software vulnerable.
-        software_vendor : str
-            The vendor of the software vulnerable.
-
-        """
-        self.cve_id = cve_id
-        self.cve_score = cve_score
-        self.description = description
-        self.devices = devices
-        self.software_name = software_name
-        self.software_vendor = software_vendor
-
     def is_server_software(self) -> bool:
         """If the software is a server software or not.
 
@@ -629,7 +568,7 @@ class MDEVulnerability:
             A vulnerability represented as a string.
 
         """
-        if self.devices and len(self.devices) > 5:
+        if self.devices and len(self.devices) > 1:
             return f'"{self.cve_id}" (TotalDevices: {len(self.devices)})'
         return f'"{self.cve_id}"'
 
@@ -654,3 +593,14 @@ class MDEVulnerability:
 
         """
         return not self.__eq__(other)
+
+    def __hash__(self):
+        """Get a hash of the vulnerability.
+        
+        Returns
+        -------
+        int
+            The hash of the vulnerability
+
+        """
+        return hash(self.cve_id)
