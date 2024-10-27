@@ -1,6 +1,10 @@
 {
   "recommendations": [
     "ms-azuretools.vscode-azurefunctions",
-    "ms-python.python"
+    "ms-python.python",
+    "charliermarsh.ruff",
+    "tamasfe.even-better-toml",
+    "fill-labs.dependi",
+    "DavidAnson.vscode-markdownlint"
   ]
 }
