@@ -10,6 +10,9 @@ MANIFEST
 # Py test
 .pytest_cache/
 
+# Ruff & uv
+.ruff_cache
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
