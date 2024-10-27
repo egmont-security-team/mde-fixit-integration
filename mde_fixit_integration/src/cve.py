@@ -1,8 +1,8 @@
 """CVE Azure function.
 
-This module contains the Azure function that takes care of
+This module features the Azure function that takes care of
 the CVE related stuff. This means it is creating FixIt tickets
-for devices hit by certain CVE.
+for devices hit by certain CVEs.
 """
 
 import csv
@@ -41,12 +41,12 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         - Tags machine after creating FxiIt ticket.
     """
     if myTimer.past_due:
-        logger.warning("the timer is past due for CVE!")
+        logger.warning("timer is past due for CVE!")
         return
 
     # SETUP - start
 
-    logger.info("starting the CVE automation.")
+    logger.info("starting the CVE automation")
 
     create_environment(DefaultAzureCredential())
 
@@ -67,12 +67,12 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         odata_filter="(computerDnsName ne null) and (isExcluded eq false)",
     )
     if not devices or len(devices) < 1:
-        logger.critical("won't continue as there is no devices to process.")
+        logger.critical("won't continue as there is no devices to process")
         return
 
     vulnerabilities: list[MDEVulnerability] = mde_client.get_vulnerabilities()
     if not vulnerabilities or len(vulnerabilities) < 1:
-        logger.critical("won't continue as there is no vulnerabilities to process.")
+        logger.critical("won't continue as there is no vulnerabilities to process")
         return
 
     multi_vulnerable_devices, single_vulnerable_devices = get_vulnerable_devices(
@@ -128,13 +128,13 @@ def proccess_single_devices(
         device = next((dev for dev in devices if dev.uuid == device_uuid), None)
 
         if not device:
-            logger.info(f'no device found with UUID="{device_uuid}" for single ticket.')
+            logger.info(f'no device found with UUID="{device_uuid}" for single ticket')
             continue
 
         if should_skip_device(device, vulnerability.cve_id):
             continue
 
-        logger.info(f"creating single ticket for {device}.")
+        logger.info(f"creating single ticket for {device}")
 
         users = mde_client.get_device_users(device)
         recommendations = mde_client.get_device_recommendations(
@@ -237,7 +237,7 @@ def proccess_multiple_devices(
 
         if any(has_tag(req, vulnerability) for req in open_multi_requests):
             logger.info(
-                f"{vulnerability.cve_id} already have fixit tag.",
+                f"{vulnerability.cve_id} already have fixit tag",
                 extra={
                     "vulnerability": str(vulnerability),
                 },
@@ -249,7 +249,7 @@ def proccess_multiple_devices(
 
             if not device:
                 logger.info(
-                    f'no device found with UUID "{device_uuid}" for multi ticket.',
+                    f'no device found with UUID "{device_uuid}" for multi ticket',
                     extra={
                         "deivce_uuid": device_uuid,
                     },
@@ -268,7 +268,7 @@ def proccess_multiple_devices(
         if len(vulnerable_devices) < 1:
             break
 
-        logger.info(f"creating multi ticket for {device}.")
+        logger.info(f"creating multi ticket for {device}")
 
         fixit_attachment_key = fixit_client.upload_file(
             create_csv_file(key, vulnerable_devices),
@@ -288,7 +288,10 @@ def proccess_multiple_devices(
                 {"id": "software_vendor", "value": vulnerability.software_vendor},
                 {"id": "devices_count", "value": f"{device_count} affected devices"},
             ],
-            "internal_note": f"Attached is a list of {device_count} devices affected by this vulnerability.",
+            "internal_note": f"""
+                Attached is a list of {device_count}
+                devices affected by this vulnerability.
+            """,
             "internal_note_attachments": [{
                 "key": fixit_attachment_key,
             }],
@@ -300,12 +303,17 @@ def proccess_multiple_devices(
             request_config["team"] = os.environ["FIXIT_MW_TEAM_ID"]
 
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",
+            f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",  # noqa: E501
             **request_config,
         )
 
         if fixit_res is None:
-            logger.error(f"Did not succesfully create the FixIt request for {vulnerability} (MULTI). Skipping..")
+            logger.error(
+                f"failed to create the ticket for {vulnerability} (MULTI)",
+                extra={
+                    "device": str(device),
+                }
+            )
             continue
 
         multi_fixit_tickets += 1
@@ -313,7 +321,13 @@ def proccess_multiple_devices(
         fixit_id = fixit_res["id"]
         for device in vulnerable_devices:
             if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
-                logger.error(f'Created multi FixIt ticket "#{fixit_id}" but failed to give {device} devices a tag.')
+                logger.error(
+                    f'failed to give {device} tag "#{fixit_id}"',
+                    extra={
+                        "device": str(device),
+                        "fixit_id": fixit_id,
+                    }
+                )
 
     return multi_fixit_tickets
 
@@ -324,23 +338,29 @@ def get_vulnerable_devices(
     dict[str, MDEVulnerability],
     dict[str, MDEVulnerability],
 ]:
-    """Returns a tuple containing all the vulnerable devices.
+    """Get a tuple containing all the vulnerable devices.
 
-    The first element is a dict of multi vulnerabilities. This is vulnerabilities that have
-    a lot of devices that are vulnerable, therefore they should be handled as a group.
-    The key is the UUID of the vulnerability and the value is the vulnerability itself.
+    The first element is a dict of multi vulnerabilities. This is vulnerabilities that
+    have a lot of devices that are vulnerable, therefore they should be handled as a
+    group. The key is the UUID of the vulnerability and the value is the vulnerability
+    itself.
 
-    The second element is a dict of single vulnerabilities. They all have few vulnerable devices,
-    therefor they should be handled individually. The key is the device UUID and the value is
-    the vulnerability
+    The second element is a dict of single vulnerabilities. They all have few vulnerable
+    devices, therefor they should be handled individually. The key is the device UUID
+    and the value is the vulnerability.
 
-    params:
-        vulnerabilities:
-            list[MDEVulnerability]: The list of vulnerabilities to process.
+    Parameters
+    ----------
+    vulnerabilities : list[MDEVulnerability]
+        The list of vulnerabilities to process.
 
-    Returns:
-        tuple[dict[str, MDEVulnerability], dict[str, MDEVulnerabilityr]]:
-            A tuple containing the multi and single device vulnerabilities.
+    Returns
+    -------
+    tuple[
+        dict[str, MDEVulnerability],
+        dict[str, MDEVulnerabilityr]
+    ]
+        A tuple containing the multi and single vulnerable devices.
 
     """
     multi_vulnerable_devices: dict[str, MDEVulnerability] = {}
@@ -348,107 +368,120 @@ def get_vulnerable_devices(
 
     try:
         # Check README to understand the difference between these two thresholds.
-        pc_threshold = int(os.environ["CVE_PC_THRESHOLD"])
-        server_threshold = int(os.environ["CVE_SERVER_THRESHOLD"])
+        threshold_pc = int(os.environ["CVE_PC_THRESHOLD"])
+        threshold_server = int(os.environ["CVE_SERVER_THRESHOLD"])
     except KeyError as exception:
-        logger.error("No device threshold specefied. Can't continue!")
+        logger.error("device threshold not specefied; can't continue!")
         raise exception
     except ValueError as exception:
-        logger.error("The device threshold is not a number. Can't continue!")
+        logger.error("device threshold is not a number; can't continue!")
         raise exception
 
     for vulnerability in vulnerabilities:
         if vulnerability.devices is None:
-            logger.warning(f"Skipping vulnerability {vulnerability} since it has no affected devices.")
+            logger.warning(f"no affected devices; skipping {vulnerability}")
             continue
 
-        threshold = server_threshold if vulnerability.is_server_software() else pc_threshold
+        if vulnerability.is_server_software():
+            threshold = threshold_server
+        else:
+            threshold = threshold_pc
+
         if len(vulnerability.devices) >= threshold:
-            vulnerability_key = f"{vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}"
+            vulnerability_key = f"""
+                {vulnerability.cve_id}-{vulnerability.software_name}-{vulnerability.software_vendor}
+            """
 
             if multi_vulnerable_devices.get(vulnerability_key):
-                logger.error("There is already a multi device vulnerability with the same key. Skipping..")
+                logger.error("multi device vulnerability alread exists; skipping!")
                 continue
 
             multi_vulnerable_devices[vulnerability_key] = vulnerability
             continue
 
         for device_uuid in vulnerability.devices:
-            # If there is multiple vulnerabilities for the same device, we only want to create one ticket still.
+            # If there is multiple vulnerabilities for the same
+            # device we only want to create one ticket still.
             if not single_vulnerable_devices.get(device_uuid):
                 single_vulnerable_devices[device_uuid] = vulnerability
 
     return (multi_vulnerable_devices, single_vulnerable_devices)
 
 
-def should_skip_device(
+def should_skip_device(  # noqa: PLR0913, PLR0917
     device: MDEDevice,
     cve_id: str,
-    *,
     check_first_seen: bool = True,
     check_should_skip: bool = True,
     check_health: bool = True,
     check_onboarding_status: bool = True,
     check_fixit_request: bool = True,
 ) -> bool:
-    """Checks if a device should be skipped for the CVE automation.
+    """Check if a device should be skipped for the CVE automation.
 
-    params:
-        device:
-            MDEDevice: The device to check.
-        cve_id:
-            str: The CVE ID to check against.
-        check_first_seen:
-            bool: If the device should be checked for first seen.
-        check_should_skip:
-            bool: If the device should be checked for tags that indicate it should be skipped.
-        check_health:
-            bool: If the device should be checked for health status.
-        check_onboarding_status:
-            bool: If the device should be checked for onboarding status.
-        check_fixit_request:
-            bool: If the device should be checked for FixIt requests tags.
+    Parameters
+    ----------
+    device : MDEDevice
+        The device to check.
+    cve_id : str
+        The CVE ID to check against.
+    check_first_seen : bool
+        If the device should be checked for first seen.
+    check_should_skip : bool
+        If the device should be checked for tags that indicate it should be skipped.
+    check_health : bool
+        If the device should be checked for health status.
+    check_onboarding_status : bool
+        If the device should be checked for onboarding status.
+    check_fixit_request : bool
+        If the device should be checked for FixIt requests tags.
 
-    Returns:
-        bool: True if the device should be skipped.
+    Returns
+    -------
+    bool
+        True if the device should be skipped.
 
     """
-    if check_first_seen and not device.first_seen < datetime.now(UTC) - timedelta(days=7):
-        logger.debug(f"Skipping {device} since it has not been registered for more than 7 days.")
+    if check_first_seen and not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):  # noqa: E501
+        logger.debug(f"skipping {device}; not registered for more than 7 days")
         return True
 
     if check_should_skip and device.should_skip("CVE", cve=cve_id):
-        logger.debug(f"Skipping {device} since its tags indicate it should be skipped for this automation.")
+        logger.debug(f"skipping {device}; tags indicate it should be skipped")
         return True
 
     if check_health and device.health == "Inactive":
-        logger.debug(f'Skipping {device} since its health is "{device.health}".')
+        logger.debug(f'skipping {device}; health is "{device.health}"')
         return True
 
     if check_onboarding_status and device.onboarding_status != "Onboarded":
-        logger.debug(f"Skipping {device} since its not onboarded yet.")
+        logger.debug(f"skipping {device}; not onboarded yet")
         return True
 
     if check_fixit_request and any(FixItClient.extract_id(tag) for tag in device.tags):
-        logger.debug(f"Skipping {device} because it has a FixIt request tag.")
+        logger.debug(f"skipping {device}; has a ticket tag")
         return True
 
     return False
 
 
 def create_csv_file(file_name: str, devices: list[MDEDevice]) -> str:
-    """Creates a CSV file with the given data.
+    """Create a CSV file with devices.
 
-    This will add the mimetype to the file and return the path to the file.
+    This will add the ".csv" mimetype to the file and return the path.
+    The file will be stored in the "temp" directory on the local machine.
 
-    params:
-        file_name:
-            str: The name of the file to create.
-        devices:
-            list[MDEDevice]: The devices to write to the file.
+    Parameters
+    ----------
+    file_name : str
+        The name of the file to create.
+    devices : list[MDEDevice]
+        The devices to write to the file.
 
-    Returns:
-        str: The key of the file in the FixIt system.
+    Returns
+    -------
+    str:
+        The key of the file in the FixIt system.
 
     """
     target_dir = os.path.join(tempfile.gettempdir(), "mde_fixit_integration")

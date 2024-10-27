@@ -1,4 +1,6 @@
-"""This module contains the Azure function that takes care of the
+"""DDC3 Azure function.
+
+This module features the Azure function that takes care of the
 Data Defender cleanup task 3. This means it cleans up duplicate
 devices by giving them a "ZZZ" tag.
 """
@@ -28,7 +30,7 @@ bp = func.Blueprint()
     use_monitor=True,
 )
 def ddc3_automation(myTimer: func.TimerRequest) -> None:
-    """This is the main Azure Function that takes care of the Data Defender Cleanup task 3.
+    """DDC3 Automation.
 
     For a detailed description of what this does refer to the README.md.
 
@@ -41,7 +43,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
     # SETUP - start
 
-    logger.info("Started the Data Defender Cleanup task 3.")
+    logger.info("starting the DDC3 automation")
 
     create_environment(DefaultAzureCredential())
 
@@ -57,10 +59,10 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
         odata_filter="(computerDnsName ne null) and (isExcluded eq false)",
     )
     if not devices:
-        logger.info("Task won't continue as there is no devices to process.")
+        logger.info("won't continue as there is no devices to process")
         return
 
-    logger.info('Start adding "ZZZ" tag to duplicate devices in the Microsoft Defender portal.')
+    logger.info('adding "ZZZ" tag to duplicate devices in the MDE')
 
     device_dict: DeviceDict = create_device_dict(devices)
 
@@ -82,33 +84,41 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
             if mde_client.alter_device_tag(device, "ZZZ", "Add"):
                 duplicate_devices_tagged += 1
 
-    logger.info(f"Finished tagging {duplicate_devices_tagged} duplicate devices in the Microsoft Defender portal.")
+    logger.info(f"finished tagging {duplicate_devices_tagged} devices")
 
 
 def is_zzz_tag(tag: str) -> bool:
-    """This returns wether this is a "ZZZ" tag or not.
+    """Tell wether a tag is a "ZZZ" tag or not.
 
-    params:
-        tag:
-            str: The string that represents the tag.
+    Parameters
+    ----------
+    tag : str:
+            The string that represents the tag.
 
-    Returns:
-        bool: True if the tag is a "ZZZ" tag.
+    Returns
+    -------
+    bool:
+        True if the tag is a "ZZZ" tag.
 
     """
     return re.fullmatch(r"(?i)^z{3}$", tag) is not None
 
 
 def create_device_dict(devices: list[MDEDevice]) -> DeviceDict:
-    """Creates a dictionary from the given list of devices where each key
-    in the dictionary, is the name of the device.
+    """Create a duplicate device dict.
+    
+    Create a dictionary from the given list of devices where
+    each key in the dictionary, is the name of the device.
 
-    params:
-        devices:
-            list[MDEDevice]: The list of MDE devices.
+    Parameters
+    ----------
+    devices : list[MDEDevice]:
+        The list of MDE devices.
 
-    Returns:
-        DeviceDict: The dictionary containing all the MDE devices.
+    Returns
+    -------
+    DeviceDict:
+        The dictionary containing all the MDE devices.
 
     """
     device_dict: DeviceDict = {}
@@ -130,12 +140,16 @@ def create_device_dict(devices: list[MDEDevice]) -> DeviceDict:
 
 
 def remove_non_duplicates(device_dict: DeviceDict):
-    """Removes non duplicate devices from a device dictionary. This make sure
-    that only devices that appear once (by name) is removed from the list.
+    """Remove non duplicate devices from a device dictionary.
+    
+    This make sure that only devices that appear once (by name)
+    is removed from the list.
 
-    params:
-        device_dict:
-            DeviceDict: The dictionary containing the devices.
+    Parameters
+    ----------
+    device_dict : DeviceDict:
+        The dictionary containing the devices.
+
     """
     for device_name, devices in list(device_dict.items()):
         if len(devices) == 1:

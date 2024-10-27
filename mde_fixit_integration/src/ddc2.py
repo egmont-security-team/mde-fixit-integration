@@ -40,12 +40,12 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
         - Removes tags from devices associated with a closed ticket.
     """
     if myTimer.past_due:
-        logger.warning("The timer is past due for DDC2!")
+        logger.warning("timer is past due for DDC2!")
         return
 
     # SETUP - start
 
-    logger.info("Started the Data Defender Cleanup task 2.")
+    logger.info("starting the DDC2 automation")
 
     create_environment(DefaultAzureCredential())
 
@@ -71,7 +71,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
 
     request_status_cache: dict[str, str] = {}
 
-    removed_fixit_tags = 0
+    removed_tags = 0
 
     for device in devices:
         if device.should_skip("DDC2"):
@@ -84,6 +84,9 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
                 continue
 
             if request_id not in request_status_cache:
+                if request_status_cache.get(request_id):
+                    continue
+
                 request_status = fixit_client.get_request_status(request_id)
                 if request_status is None:
                     logger.warning(
@@ -94,6 +97,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
                         },
                     )
                     continue
+
                 request_status_cache[request_id] = request_status
 
             request_status = request_status_cache[request_id]
@@ -101,8 +105,6 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
                 continue
 
             if mde_client.alter_device_tag(device, tag, "Remove"):
-                removed_fixit_tags += 1
+                removed_tags += 1
 
-    logger.info(
-        f"Finished removing {removed_fixit_tags} Fix-It tags from devices in the Microsoft Defender portal.",
-    )
+    logger.info(f"finished removing {removed_tags} tags from devices")
