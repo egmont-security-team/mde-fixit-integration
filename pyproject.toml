@@ -1,34 +1,29 @@
-[build-system]
-requires = ["setuptools>=74"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "mde_fixit_integration"
-version = "0.1.0"
-authors = [{ name = "DAEKJO", email = "daekjo@egmont.com" }]
-description = "A MDE FixIt Automation Integration"
+name = "mde-fixit-integration"
+version = "0.2.15"
+description = "An integration between MDE and Xurrent (4me)"
+authors = [
+    { name = "Kasper Jønsson", email = "daekjo@egmont.com" }
+]
 readme = "README.md"
 requires-python = ">=3.11"
-classifiers = [
-    "Programming Language :: Python :: 3.11",
-    "Operating System :: OS Independent",
-]
-dynamic = ["dependencies"]
-
-[project.urls]
-Homepage = "https://github.com/kanerix/mde-fixit-integration"
-Issues = "https://github.com/kanrix/mde-fixit-integration/issues"
-
-[tool.pylint.MESSAGES_CONTROL]
-disable = [
-    "logging-fstring-interpolation",
-    "invalid-name",
-    "line-too-long",
-    "too-many-arguments",
+urls = { Homepage = "https://github.com/egmont-security-team/mde-fixit-integration" }
+dependencies = [
+    "azure-functions>=1.21.3",
+    "azure-identity>=1.19.0",
+    "azure-keyvault-secrets>=4.9.0",
+    "requests>=2.32.3",
+    "tenacity>=9.0.0",
+    "xmldict>=0.4.1",
 ]
 
-[tool.setuptools]
-packages = ["mde_fixit_integration"]
-
-[tool.setuptools.dynamic.dependencies]
-file = "requirements.txt"
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.5",
+]
+lint = [
+    "ruff>=0.7.1",
+]
+test = [
+    "pytest>=8.3.3",
+]
