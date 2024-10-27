@@ -45,21 +45,21 @@ If a device should not be included in a automation, you can give specific tags i
 
 - Set the environment variable `KEY_VAULT_NAME` to change what key vault will be used to load secrets.
 - Set the environment variable `CVE_PC_THRESHOLD` to change how many pc under 1 vulnerability to create a multi ticket.
-- Set the environment variable `CVE_SERVER_THRESHOLD` to change how many serveres under 1 vulnerability to create a multi ticket.
+- Set the environment variable `CVE_SERVER_THRESHOLD` to change how many servers under 1 vulnerability to create a multi ticket.
 
 ### Secrets
 
 #### MDE
 
 - `MDE_TENANT`: Set this to change what tenant the MDE environment is in.
-- `MDE_CLIENT_ID`: The client id of the enterpise app for defender.
-- `MDE_SECRET_VALUE`: The secret value of the enterpise app for defender.
+- `MDE_CLIENT_ID`: The client id of the enterprise app for defender.
+- `MDE_SECRET_VALUE`: The secret value of the enterprise app for defender.
 
 #### FixIt
 
 - `FIXIT_4ME_BASE_URL`: The [base URL](https://developer.4me.com/v1/) of the FixIt 4me API (also called service URL)
 - `FIXIT_4ME_ACCOUNT`: The FxiIt 4me account which we check.
-- `FIXIT_4ME_API_KEY`: The API key with the right permission from the [Access neded](#access-needed) section.
+- `FIXIT_4ME_API_KEY`: The API key with the right permission from the [Access needed](#access-needed) section.
 - `FIXIT_SINGLE_TEMPLATE_ID`: The template ID of the single vulnerable device template.
 - `FIXIT_MULTI_TEMPLATE_ID`: The template ID of the a multiple vulnerable devices template.
 - `FIXIT_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created.
@@ -83,6 +83,6 @@ If a device should not be included in a automation, you can give specific tags i
 ### Known problem
 
 In Azure, an Azure Function on a Consumption Plan is only allowed to run for 10 minutes.
-This policy is encforced by Azure since a Consumption Plan does not allocated static resources.
-The only way to fix this is by changing the Azure App plan to premium. This cost a lot more
-money (900 DKK/Month) and are therefore not preffered right now.
+This policy is enforced by Azure since a Consumption Plan does not allocated static resources.
+The only way to fix this is by changing the Azure App plan to premium. This costs a lot more
+money (900 DKK/Month) and are therefore not preferred right now.
