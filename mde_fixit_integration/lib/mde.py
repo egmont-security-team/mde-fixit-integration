@@ -96,7 +96,7 @@ class MDEClient:
         device: MDEDevice,
         tag: str,
         action: Literal["Add", "Remove"],
-    ) -> Optional[bool]:
+    ) -> bool | None:
         """
         Alters a tag for a given device.
 
@@ -147,7 +147,7 @@ class MDEClient:
     )
     def get_devices(
         self,
-        odata_filter: Optional[str] = None,
+        odata_filter: str | None = None,
     ) -> list[MDEDevice]:
         """
         Get a list of all devices from MDE.
@@ -195,7 +195,7 @@ class MDEClient:
                             uuid=new_device_id,
                             name=payload["computerDnsName"],
                             health=payload["healthStatus"],
-                            operating_system=payload["osPlatform"],
+                            os=payload["osPlatform"],
                             onboarding_status=payload["onboardingStatus"],
                             tags=payload["machineTags"],
                             first_seen=datetime.fromisoformat(payload["firstSeen"]),
@@ -359,7 +359,7 @@ class MDEClient:
     def get_device_recommendations(
         self,
         device: MDEDevice,
-        odata_filter: Optional[str] = None,
+        odata_filter: str | None = None,
     ) -> list[str]:
         """
         List of recommendations for a given device.
@@ -485,10 +485,8 @@ class MDEDevice:
             True if the device is a server.
 
         """
-        return any(
-            os in self.os.lower()
-            for os in ["server", "redhatenterpriselinux", "ubuntu"]
-        )
+        server_os = ["server", "redhatenterpriselinux", "ubuntu"]
+        return any(os in self.os.lower() for os in server_os)
 
     def should_skip(
         self, automation: Literal["DDC2", "DDC3", "CVE"], cve: None | str = None,

@@ -104,8 +104,6 @@ def proccess_single_devices(
 ) -> int:
     """
     Process single vulnerable devices.
-    
-    and creates FixIt tickets for them.
 
     Parameters
     ----------
@@ -532,7 +530,7 @@ def has_open_ticket(vulnerability: MDEVulnerability, open_multi_requests: Any) -
 
     Returns
     -------
-    bool:
+    bool
         Wether the request already exists
 
     """
