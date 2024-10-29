@@ -1,1 +1,0 @@
-"""Entry file for module."""
