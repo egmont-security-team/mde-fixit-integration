@@ -1,4 +1,5 @@
-"""CVE Azure function.
+"""
+CVE Azure function.
 
 This module features the Azure function that takes care of
 the CVE related stuff. This means it is creating FixIt tickets
@@ -17,7 +18,7 @@ from azure.identity import DefaultAzureCredential
 
 from mde_fixit_integration.lib.fixit import FixItClient
 from mde_fixit_integration.lib.mde import MDEClient, MDEDevice, MDEVulnerability
-from mde_fixit_integration.lib.utils import create_environment
+from mde_fixit_integration.lib.utils import create_environment, get_cve_from_str
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,8 @@ bp = func.Blueprint()
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
-    """CVE automation.
+    """
+    CVE automation.
 
     This function automatically creates a FixIt tickets for vulnerable devices.
     For detailed description of what this does refer to the README.md.
@@ -100,7 +102,8 @@ def proccess_single_devices(
     mde_client: MDEClient,
     fixit_client: FixItClient,
 ) -> int:
-    """Process single vulnerable devices.
+    """
+    Process single vulnerable devices.
     
     and creates FixIt tickets for them.
 
@@ -205,7 +208,8 @@ def proccess_multiple_devices(
     mde_client: MDEClient,
     fixit_client: FixItClient,
 ) -> int:
-    """Process multi vulnerable devices.
+    """
+    Process multi vulnerable devices.
 
     Parameters
     ----------
@@ -235,9 +239,9 @@ def proccess_multiple_devices(
     for key, vulnerability in multi_vulnerable_devices.items():
         vulnerable_devices = []
 
-        if any(has_tag(req, vulnerability) for req in open_multi_requests):
+        if any(has_open_ticket(req, vulnerability) for req in open_multi_requests):
             logger.info(
-                f"{vulnerability.cve_id} already have fixit tag",
+                f"{vulnerability.cve_id} already has a open multi ticket",
                 extra={
                     "vulnerability": str(vulnerability),
                 },
@@ -338,7 +342,8 @@ def get_vulnerable_devices(
     dict[str, MDEVulnerability],
     dict[str, MDEVulnerability],
 ]:
-    """Get a tuple containing all the vulnerable devices.
+    """
+    Get a tuple containing all the vulnerable devices.
 
     The first element is a dict of multi vulnerabilities. This is vulnerabilities that
     have a lot of devices that are vulnerable, therefore they should be handled as a
@@ -417,7 +422,8 @@ def should_skip_device(  # noqa: PLR0913, PLR0917
     check_onboarding_status: bool = True,
     check_fixit_request: bool = True,
 ) -> bool:
-    """Check if a device should be skipped for the CVE automation.
+    """
+    Check if a device should be skipped for the CVE automation.
 
     Parameters
     ----------
@@ -466,7 +472,8 @@ def should_skip_device(  # noqa: PLR0913, PLR0917
 
 
 def create_csv_file(file_name: str, devices: list[MDEDevice]) -> str:
-    """Create a CSV file with devices.
+    """
+    Create a CSV file with devices.
 
     This will add the ".csv" mimetype to the file and return the path.
     The file will be stored in the "temp" directory on the local machine.
@@ -509,3 +516,27 @@ def create_csv_file(file_name: str, devices: list[MDEDevice]) -> str:
             writer.writerow([getattr(device, key) for key in keys_to_save])
 
     return file_path
+
+
+def has_open_ticket(vulnerability: MDEVulnerability, open_multi_requests: Any) -> bool:
+    """
+    Wether a request already has an open ticket.
+
+    Parameters
+    ----------
+    vulnerability : MDEVulnerability
+        The vulnerability
+
+    open_multi_requests : any
+        All opem multi requests
+
+    Returns
+    -------
+    bool:
+        Wether the request already exists
+
+    """
+    for req in open_multi_requests:
+        if get_cve_from_str(req["subject"]) == vulnerability.cve_id:
+            return True
+    return False

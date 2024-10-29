@@ -37,7 +37,8 @@ class MDEClient:
         azure_mde_secret_value: str,
         authenticate=True,
     ):
-        """Create a new client to interact with the MDE API.
+        """
+        Create a new client to interact with the MDE API.
 
         Parameters
         ----------
@@ -96,7 +97,8 @@ class MDEClient:
         tag: str,
         action: Literal["Add", "Remove"],
     ) -> Optional[bool]:
-        """Alters a tag for a given device.
+        """
+        Alters a tag for a given device.
 
         Parameters
         ----------
@@ -147,7 +149,8 @@ class MDEClient:
         self,
         odata_filter: Optional[str] = None,
     ) -> list[MDEDevice]:
-        """Get a list of all devices from MDE.
+        """
+        Get a list of all devices from MDE.
 
         This might takes multiples requests, because Microsoft Defender for Endpoint
         only allows to fetch 10K devices at a time.
@@ -225,7 +228,8 @@ class MDEClient:
         reraise=True,
     )
     def get_vulnerabilities(self) -> list[MDEVulnerability]:
-        """Get the vulnerabilities of the machine.
+        """
+        Get the vulnerabilities of the machine.
 
         Returns
         -------
@@ -311,7 +315,8 @@ class MDEClient:
         reraise=True,
     )
     def get_device_users(self, device: MDEDevice) -> list[str]:
-        """Get a list of users on the device.
+        """
+        Get a list of users on the device.
 
         Returns
         -------
@@ -356,7 +361,8 @@ class MDEClient:
         device: MDEDevice,
         odata_filter: Optional[str] = None,
     ) -> list[str]:
-        """List of recommendations for a given device.
+        """
+        List of recommendations for a given device.
 
         Parameters
         ----------
@@ -404,7 +410,8 @@ class MDEClient:
 
 @dataclass
 class MDEDevice:
-    """A class that represents a Microsoft Defender for Endpoint client.
+    """
+    A class that represents a Microsoft Defender for Endpoint client.
 
     See below for the class schema properties:
     https://learn.microsoft.com/en-us/microsoft-365/security/defender-endpoint/api/machine?view=o365-worldwide#properties
@@ -419,7 +426,8 @@ class MDEDevice:
     first_seen: datetime
 
     def __str__(self) -> str:
-        """Device represented as a string.
+        """
+        Device represented as a string.
 
         Returns
         -------
@@ -432,7 +440,8 @@ class MDEDevice:
         return f'"UUID={self.uuid}"'
 
     def __eq__(self, other: MDEDevice) -> bool:
-        """Two devices are equal if they have the same UUID.
+        """
+        Two devices are equal if they have the same UUID.
 
         Returns
         -------
@@ -443,7 +452,8 @@ class MDEDevice:
         return self.uuid == other.uuid
 
     def __ne__(self, other: MDEDevice) -> bool:
-        """Two devices are not equal if they have different UUIDs.
+        """
+        Two devices are not equal if they have different UUIDs.
 
         Returns
         -------
@@ -454,7 +464,8 @@ class MDEDevice:
         return not self.__eq__(other)
     
     def __hash__(self):
-        """Get a hash of the device.
+        """
+        Get a hash of the device.
         
         Returns
         -------
@@ -465,7 +476,8 @@ class MDEDevice:
         return hash(self.uuid)
 
     def is_server(self) -> bool:
-        """If the device is a server or not.
+        """
+        If the device is a server or not.
 
         Returns
         -------
@@ -481,7 +493,8 @@ class MDEDevice:
     def should_skip(
         self, automation: Literal["DDC2", "DDC3", "CVE"], cve: None | str = None,
     ) -> bool:
-        """If the device should be skipped for a given automation.
+        """
+        If the device should be skipped for a given automation.
 
         Automations
         -----------
@@ -535,7 +548,8 @@ class MDEDevice:
 
 @dataclass
 class MDEVulnerability:
-    """A class that represents a Microsoft Defender for Endpoint vulnerability.
+    """
+    A class that represents a Microsoft Defender for Endpoint vulnerability.
 
     See below for the class schema properties:
     https://learn.microsoft.com/en-us/defender-endpoint/api/vulnerability?view=o365-worldwide#properties
@@ -549,7 +563,8 @@ class MDEVulnerability:
     software_vendor: str
 
     def is_server_software(self) -> bool:
-        """If the software is a server software or not.
+        """
+        If the software is a server software or not.
 
         Returns
         -------
@@ -560,7 +575,8 @@ class MDEVulnerability:
         return "server" in self.software_name.lower()
 
     def __str__(self):
-        """Vulnerability represented as a string.
+        """
+        Vulnerability represented as a string.
 
         Returns
         -------
@@ -573,7 +589,8 @@ class MDEVulnerability:
         return f'"{self.cve_id}"'
 
     def __eq__(self, other: MDEVulnerability):
-        """Two vulnerabilities are equal if they have the same CVE ID.
+        """
+        Two vulnerabilities are equal if they have the same CVE ID.
 
         Returns
         -------
@@ -584,7 +601,8 @@ class MDEVulnerability:
         return self.cve_id == other.cve_id
 
     def __ne__(self, other: MDEVulnerability):
-        """Two vulnerabilities are not equal if they have a different CVE ID.
+        """
+        Two vulnerabilities are not equal if they have a different CVE ID.
 
         Returns
         -------
@@ -595,7 +613,8 @@ class MDEVulnerability:
         return not self.__eq__(other)
 
     def __hash__(self):
-        """Get a hash of the vulnerability.
+        """
+        Get a hash of the vulnerability.
         
         Returns
         -------

@@ -31,7 +31,8 @@ class FixItClient:
         fixit_4me_account: str,
         api_key: str,
     ) -> None:
-        """Create a new client to interact with the FixIt API.
+        """
+        Create a new client to interact with the FixIt API.
 
         Parameters
         ----------
@@ -49,7 +50,8 @@ class FixItClient:
 
     @staticmethod
     def extract_id(string: str) -> Optional[str]:
-        """Extra a request ID from a string.
+        """
+        Extra a request ID from a string.
 
         Gets the FixIt request ID from a given string (if it's a prober FixIt tag).
         This uses regular expression to find the tag.
@@ -83,7 +85,8 @@ class FixItClient:
         reraise=True,
     )
     def get_request_status(self, request_id: str) -> str:
-        """Get the status of a request.
+        """
+        Get the status of a request.
 
         Parameters
         ----------
@@ -124,7 +127,8 @@ class FixItClient:
         subject: str,
         **kwargs,
     ) -> Any:
-        """Create a request.
+        """
+        Create a request.
 
         Parameters
         ----------
@@ -166,7 +170,8 @@ class FixItClient:
         reraise=True,
     )
     def list_requests(self, query_filter: Optional[str] = None) -> list[Any]:
-        """Get a list of all requests in the account.
+        """
+        Get a list of all requests in the account.
 
         Parameters
         ----------
@@ -212,7 +217,8 @@ class FixItClient:
         return all_requests
 
     def get_attachments_storage(self) -> Any:
-        """Get the attachment storage information.
+        """
+        Get the attachment storage information.
 
         Returns
         -------
@@ -234,7 +240,8 @@ class FixItClient:
         return res.json()
 
     def upload_file(self, file_path: str) -> str:
-        """Upload a file to attachment storage.
+        """
+        Upload a file to attachment storage.
 
         Parameters
         ----------

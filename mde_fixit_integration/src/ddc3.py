@@ -1,4 +1,5 @@
-"""DDC3 Azure function.
+"""
+DDC3 Azure function.
 
 This module features the Azure function that takes care of the
 Data Defender cleanup task 3. This means it cleans up duplicate
@@ -30,7 +31,8 @@ bp = func.Blueprint()
     use_monitor=True,
 )
 def ddc3_automation(myTimer: func.TimerRequest) -> None:
-    """DDC3 Automation.
+    """
+    DDC3 Automation.
 
     For a detailed description of what this does refer to the README.md.
 
@@ -88,7 +90,8 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
 
 def is_zzz_tag(tag: str) -> bool:
-    """Tell wether a tag is a "ZZZ" tag or not.
+    """
+    Tell wether a tag is a "ZZZ" tag or not.
 
     Parameters
     ----------
@@ -105,7 +108,8 @@ def is_zzz_tag(tag: str) -> bool:
 
 
 def create_device_dict(devices: list[MDEDevice]) -> DeviceDict:
-    """Create a duplicate device dict.
+    """
+    Create a duplicate device dict.
     
     Create a dictionary from the given list of devices where
     each key in the dictionary, is the name of the device.
@@ -140,7 +144,8 @@ def create_device_dict(devices: list[MDEDevice]) -> DeviceDict:
 
 
 def remove_non_duplicates(device_dict: DeviceDict):
-    """Remove non duplicate devices from a device dictionary.
+    """
+    Remove non duplicate devices from a device dictionary.
     
     This make sure that only devices that appear once (by name)
     is removed from the list.

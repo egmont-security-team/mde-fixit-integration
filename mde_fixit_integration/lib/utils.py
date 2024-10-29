@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 def get_secret(
     secret_client: SecretClient, secret_name: str, env_var: Optional[str] = None,
 ) -> str:
-    """Get a secret from Azure Key Vault.
+    """
+    Get a secret from Azure Key Vault.
 
     Parameters
     ----------
@@ -48,7 +49,8 @@ def get_secret(
 
 
 def create_environment(credential: DefaultAzureCredential) -> None:
-    """Create the environment variables from the secrets in the key vault.
+    """
+    Create the environment variables from the secrets in the key vault.
 
     Parameters
     ----------
@@ -96,7 +98,8 @@ def create_environment(credential: DefaultAzureCredential) -> None:
 
 
 def get_cve_from_str(string: str) -> Optional[str]:
-    """Get a CVE from a string.
+    """
+    Get a CVE from a string.
 
     Gets the first CVE from a given string (if it has a CVE tag).
     This uses regular expression to find the first CVE tag in the string.

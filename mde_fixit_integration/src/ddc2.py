@@ -1,4 +1,5 @@
-"""DDC2 Azure function.
+"""
+DDC2 Azure function.
 
 This module features the Azure function responsible for handling
 Data Defender Cleanup Task 2. Specifically, it removes FixIt tags
@@ -30,7 +31,8 @@ bp = func.Blueprint()
     use_monitor=True,
 )
 def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
-    """DDC2 automation.
+    """
+    DDC2 automation.
 
     This is the main Azure function that takes care of the
     Data Defender Cleanup task 2. For detailed description

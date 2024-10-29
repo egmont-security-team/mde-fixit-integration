@@ -6,7 +6,8 @@ from mde_fixit_integration.lib.mde import MDEDevice
 
 
 def get_devices() -> list[MDEDevice]:
-    """Return a list of MDEDevice objects for testing.
+    """
+    Return a list of MDEDevice objects for testing.
     
     Returns
     -------
