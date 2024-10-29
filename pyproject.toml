@@ -2,9 +2,7 @@
 name = "mde-fixit-integration"
 version = "0.2.15"
 description = "An integration between MDE and Xurrent (4me)"
-authors = [
-    { name = "Kasper Jønsson", email = "daekjo@egmont.com" }
-]
+authors = [{ name = "Kasper Jønsson", email = "daekjo@egmont.com" }]
 readme = "README.md"
 requires-python = "~=3.11"
 urls = { Homepage = "https://github.com/egmont-security-team/mde-fixit-integration" }
@@ -14,19 +12,17 @@ dependencies = [
     "azure-keyvault-secrets>=4.9.0",
     "requests>=2.32.3",
     "tenacity>=9.0.0",
-    "xmldict>=0.4.1",
+    "xmltodict>=0.14.2",
 ]
 
 [tool.uv]
 default-groups = ["dev", "lint"]
 
 [dependency-groups]
-dev = [
-    "ipykernel>=6.29.5",
-]
-lint = [
-    "ruff>=0.7.1",
-]
-test = [
-    "pytest>=8.3.3",
-]
+dev = ["ipykernel>=6.29.5"]
+lint = ["ruff>=0.7.1"]
+test = ["pytest>=8.3.3"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
