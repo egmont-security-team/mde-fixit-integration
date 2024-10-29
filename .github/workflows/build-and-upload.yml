@@ -21,10 +21,14 @@ jobs:
         with:
           python-version: ${{ inputs.python_version }}
 
-      - name: Create and start virtual environment
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      
+      - name: Sync dependencies
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
+          uv sync
 
       - name: Install dependencies
         run: pip install --target="./.python_packages/lib/site-packages" -e . 
