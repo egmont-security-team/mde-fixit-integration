@@ -57,9 +57,9 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
         os.environ["AZURE_MDE_SECRET_VALUE"],
     )
     fixit_client = FixItClient(
-        os.environ["FIXIT_4ME_BASE_URL"],
-        os.environ["FIXIT_4ME_ACCOUNT"],
-        os.environ["FIXIT_4ME_API_KEY"],
+        os.environ["XURRENT_BASE_URL"],
+        os.environ["XURRENT_ACCOUNT"],
+        os.environ["XURRENT_API_KEY"],
     )
 
     # SETUP - end
@@ -68,7 +68,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
         odata_filter="(computerDnsName ne null) and (isExcluded eq false)",
     )
     if not devices or len(devices) < 1:
-        logger.critical("task won't continue as there is no devices to process.")
+        logger.critical("task won't continue as there is no devices to process")
         return
 
     request_status_cache: dict[str, str] = {}

@@ -76,11 +76,11 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     for devices in device_dict.values():
         for device in devices:
             if len(list(filter(is_zzz_tag, device.tags))) > 0:
-                logger.debug(f"{device} already tagged or is not inactive. Skipping...")
+                logger.debug(f"{device} already tagged or is not inactive; skipping...")
                 continue
 
             if device.health != "Inactive":
-                logger.debug(f"{device} is not inactive ({device.health}). Skipping...")
+                logger.debug(f"{device} is not inactive ({device.health}); skipping...")
                 continue
 
             if mde_client.alter_device_tag(device, "ZZZ", "Add"):

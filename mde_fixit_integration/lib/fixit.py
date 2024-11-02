@@ -111,7 +111,6 @@ class FixItClient:
         res.raise_for_status()
 
         json = res.json()
-
         return json["status"]
 
     @retry(

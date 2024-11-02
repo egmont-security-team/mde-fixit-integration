@@ -58,9 +58,9 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         os.environ["AZURE_MDE_SECRET_VALUE"],
     )
     fixit_client = FixItClient(
-        os.environ["FIXIT_4ME_BASE_URL"],
-        os.environ["FIXIT_4ME_ACCOUNT"],
-        os.environ["FIXIT_4ME_API_KEY"],
+        os.environ["XURRENT_BASE_URL"],
+        os.environ["XURRENT_ACCOUNT"],
+        os.environ["XURRENT_API_KEY"],
     )
 
     # SETUP - end
@@ -82,10 +82,16 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     )
 
     single_tickets_created = proccess_single_devices(
-        single_vulnerable_devices, devices, mde_client, fixit_client,
+        single_vulnerable_devices,
+        devices,
+        mde_client,
+        fixit_client,
     )
     multi_tickets_created = proccess_multiple_devices(
-        multi_vulnerable_devices, devices, mde_client, fixit_client,
+        multi_vulnerable_devices,
+        devices,
+        mde_client,
+        fixit_client,
     )
 
     total_tickets_created = multi_tickets_created + single_tickets_created
@@ -116,7 +122,7 @@ def proccess_single_devices(
         A client to interact with MDE.
     fixit_client : FixItClient
         A Client to interact with FixIt.
-    
+
     Returns
     -------
     int
@@ -139,11 +145,14 @@ def proccess_single_devices(
 
         users = mde_client.get_device_users(device)
         recommendations = mde_client.get_device_recommendations(
-            device, odata_filter="remediationType eq 'Update'",
+            device,
+            odata_filter="remediationType eq 'Update'",
         )  # Use filter to only get software update recommendation
 
         cve_page = f"https://security.microsoft.com/vulnerabilities/vulnerability/{vulnerability.cve_id}/overview"
-        device_page = f"https://security.microsoft.com/machines/v2/{device.uuid}/overview"
+        device_page = (
+            f"https://security.microsoft.com/machines/v2/{device.uuid}/overview"
+        )
 
         request_config: dict[str, Any] = {
             "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
@@ -164,11 +173,11 @@ def proccess_single_devices(
         }
 
         if len(recommendations) == 0:
-            request_config["team"] = os.environ["FIXIT_SEC_TEAM_ID"]
+            request_config["team"] = os.environ["CVE_SEC_TEAM_ID"]
         elif device.is_server():
-            request_config["team"] = os.environ["FIXIT_CAD_TEAM_ID"]
+            request_config["team"] = os.environ["CVE_CAD_TEAM_ID"]
         else:
-            request_config["team"] = os.environ["FIXIT_SD_TEAM_ID"]
+            request_config["team"] = os.environ["CVE_SD_TEAM_ID"]
 
         ticket_id = f"{vulnerability.cve_id} - {vulnerability.cve_score}"
         fixit_res = fixit_client.create_request(
@@ -280,8 +289,8 @@ def proccess_multiple_devices(
         device_count = str(len(vulnerable_devices))
 
         request_config: dict[str, Any] = {
-            "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
-            "template_id": os.environ["FIXIT_MULTI_TEMPLATE_ID"],
+            "service_instance_id": os.environ["CVE_SERVICE_INSTANCE_ID"],
+            "template_id": os.environ["CVE_MULTI_TEMPLATE_ID"],
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},
                 {"id": "cve_id", "value": vulnerability.cve_id},
@@ -294,15 +303,17 @@ def proccess_multiple_devices(
                 Attached is a list of {device_count}
                 devices affected by this vulnerability.
             """,
-            "internal_note_attachments": [{
-                "key": fixit_attachment_key,
-            }],
+            "internal_note_attachments": [
+                {
+                    "key": fixit_attachment_key,
+                }
+            ],
         }
 
         if vulnerability.is_server_software():
-            request_config["team"] = os.environ["FIXIT_CAD_TEAM_ID"]
+            request_config["team"] = os.environ["CVE_CAD_TEAM_ID"]
         else:
-            request_config["team"] = os.environ["FIXIT_MW_TEAM_ID"]
+            request_config["team"] = os.environ["CVE_MW_TEAM_ID"]
 
         fixit_res = fixit_client.create_request(
             f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",  # noqa: E501
@@ -314,7 +325,7 @@ def proccess_multiple_devices(
                 f"failed to create the ticket for {vulnerability} (MULTI)",
                 extra={
                     "device": str(device),
-                }
+                },
             )
             continue
 
@@ -328,7 +339,7 @@ def proccess_multiple_devices(
                     extra={
                         "device": str(device),
                         "fixit_id": fixit_id,
-                    }
+                    },
                 )
 
     return multi_fixit_tickets
@@ -371,7 +382,7 @@ def get_vulnerable_devices(
 
     try:
         # Check README to understand the difference between these two thresholds.
-        threshold_pc = int(os.environ["CVE_PC_THRESHOLD"])
+        threshold = int(os.environ["CVE_THRESHOLD"])
         threshold_server = int(os.environ["CVE_SERVER_THRESHOLD"])
     except KeyError as exception:
         logger.error("device threshold not specefied; can't continue!")
@@ -387,8 +398,6 @@ def get_vulnerable_devices(
 
         if vulnerability.is_server_software():
             threshold = threshold_server
-        else:
-            threshold = threshold_pc
 
         if len(vulnerability.devices) >= threshold:
             vulnerability_key = f"""
@@ -411,7 +420,7 @@ def get_vulnerable_devices(
     return (multi_vulnerable_devices, single_vulnerable_devices)
 
 
-def should_skip_device(  # noqa: PLR0913, PLR0917
+def should_skip_device(
     device: MDEDevice,
     cve_id: str,
     check_first_seen: bool = True,
@@ -446,7 +455,9 @@ def should_skip_device(  # noqa: PLR0913, PLR0917
         True if the device should be skipped.
 
     """
-    if check_first_seen and not device.first_seen < (datetime.now(UTC) - timedelta(days=7)):  # noqa: E501
+    if check_first_seen and not device.first_seen < (
+        datetime.now(UTC) - timedelta(days=7)
+    ):  # noqa: E501
         logger.debug(f"skipping {device}; not registered for more than 7 days")
         return True
 
@@ -485,7 +496,7 @@ def create_csv_file(file_name: str, devices: list[MDEDevice]) -> str:
 
     Returns
     -------
-    str:
+    str
         The key of the file in the FixIt system.
 
     """
@@ -534,7 +545,7 @@ def has_open_ticket(vulnerability: MDEVulnerability, open_multi_requests: Any) -
         Wether the request already exists
 
     """
-    for req in open_multi_requests:
-        if get_cve_from_str(req["subject"]) == vulnerability.cve_id:
-            return True
-    return False
+    return any(
+        get_cve_from_str(req["subject"]) == vulnerability.cve_id
+        for req in open_multi_requests
+    )

@@ -26,20 +26,14 @@ jobs:
         with:
           version: "latest"
       
-      - name: Sync dependencies
-        run: |
-          uv sync
-
       - name: Install dependencies
-        run: pip install --target="./.python_packages/lib/site-packages" -e . 
+        run: uv pip install --target="./.python_packages/lib/site-packages" -e .
 
       - name: Zip artifact for deployment
-        run: zip release.zip ./* ./.python_packages !README.md !terraform -r
+        run: zip -r release.zip ./mde_fixit_ingegration ./.python_packages function_app.py host.json .python-version
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: mde-fixit-integration
-          path: |
-            release.zip
-            !.venv/
+          path: release.zip

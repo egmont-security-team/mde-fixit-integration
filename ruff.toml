@@ -2,3 +2,6 @@
 preview = true
 select = ["PL", "UP", "E", "D", "DOC"]
 ignore = ["D212", "D203"]
+
+[lint.pylint]
+max-args = 10

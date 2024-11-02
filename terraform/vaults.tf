@@ -109,31 +109,31 @@ resource "azurerm_key_vault_secret" "azure_mde_secret_value_prod" {
 }
 
 resource "azurerm_key_vault_secret" "fixit_4me_base_url_prod" {
-  name         = "FixIt-4Me-Base-URL"
+  name         = "Xurrent-Base-URL"
   value        = "https://api.4me.com/v1"
   key_vault_id = azurerm_key_vault.prod.id
 }
 
 resource "azurerm_key_vault_secret" "fixit_4me_account_prod" {
-  name         = "FixIt-4Me-Account"
+  name         = "Xurrent-Account"
   value        = "egmont-it"
   key_vault_id = azurerm_key_vault.prod.id
 }
 
 resource "azurerm_key_vault_secret" "fixit_4me_api_key_prod" {
-  name         = "FixIt-4Me-API-Key"
-  value        = var.fixit_api_key_prod
+  name         = "Xurrent-API-Key"
+  value        = var.xurrent_api_key_prod
   key_vault_id = azurerm_key_vault.prod.id
 }
 
 resource "azurerm_key_vault_secret" "cve_single_fixit_template_id_prod" {
-  name         = "CVE-Single-FixIt-Template-ID"
+  name         = "CVE-Single-Template-ID"
   value        = "187104"
   key_vault_id = azurerm_key_vault.prod.id
 }
 
 resource "azurerm_key_vault_secret" "cve_multi_fixit_template_id_prod" {
-  name         = "CVE-Multi-FixIt-Template-ID"
+  name         = "CVE-Multi-Template-ID"
   value        = "187105"
   key_vault_id = azurerm_key_vault.prod.id
 }
@@ -189,31 +189,31 @@ resource "azurerm_key_vault_secret" "azure_mde_secret_value_stag" {
 }
 
 resource "azurerm_key_vault_secret" "fixit_4me_base_url_stag" {
-  name         = "FixIt-4Me-Base-URL"
+  name         = "Xurrent-Base-URL"
   value        = "https://api.4me.qa/v1"
   key_vault_id = azurerm_key_vault.stag.id
 }
 
 resource "azurerm_key_vault_secret" "fixit_4me_account_stag" {
-  name         = "FixIt-4Me-Account"
+  name         = "Xurrent-Account"
   value        = "egmont-it-new"
   key_vault_id = azurerm_key_vault.stag.id
 }
 
 resource "azurerm_key_vault_secret" "fixit_4me_api_key_stag" {
-  name         = "FixIt-4Me-API-Key"
-  value        = var.fixit_api_key_stag
+  name         = "Xurrent-API-Key"
+  value        = var.xurrent_api_key_stag
   key_vault_id = azurerm_key_vault.stag.id
 }
 
 resource "azurerm_key_vault_secret" "cve_single_fixit_template_id_stag" {
-  name         = "CVE-Single-FixIt-Template-ID"
+  name         = "CVE-Single-Template-ID"
   value        = "186253"
   key_vault_id = azurerm_key_vault.stag.id
 }
 
 resource "azurerm_key_vault_secret" "cve_multi_fixit_template_id_stag" {
-  name         = "CVE-Multi-FixIt-Template-ID"
+  name         = "CVE-Multi-Template-ID"
   value        = "187490"
   key_vault_id = azurerm_key_vault.stag.id
 }

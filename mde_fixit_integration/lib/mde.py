@@ -7,6 +7,7 @@ import re
 import time
 from dataclasses import dataclass
 from datetime import datetime
+from json import dumps
 from typing import Literal, Optional
 
 import requests
@@ -81,7 +82,8 @@ class MDEClient:
 
         res.raise_for_status()
 
-        self.api_token = res.json()["access_token"]
+        json = res.json()
+        self.api_token = json["access_token"]
 
     @retry(
         stop=stop_after_attempt(5),
@@ -126,14 +128,13 @@ class MDEClient:
         )
 
         if delay := res.headers.get("Retry-After"):
-            delay = int(delay)
-            logger.info(f"request was rate limited; retrying in {delay} seconds.")
-            time.sleep(delay)
-            self.alter_device_tag(device, tag, action)
+            logger.info(f"request was rate limited; retrying in {delay} seconds")
+            time.sleep(int(delay))
+            return self.alter_device_tag(device, tag, action)
 
         res.raise_for_status()
 
-        logger.info(f'performed "{action}" with tag "{tag}" on device {device}.')
+        logger.info(f'performed "{action}" with tag "{tag}" on device {device}')
 
         return True
 
@@ -184,7 +185,7 @@ class MDEClient:
             json = res.json()
 
             new_devices = json["value"]
-            logger.debug(f"fetched {len(new_devices)} new devices.")
+            logger.debug(f"fetched {len(new_devices)} new devices")
 
             for payload in new_devices:
                 new_device_id = payload["id"]
@@ -203,9 +204,9 @@ class MDEClient:
                     )
                 except ValueError:
                     logger.warning(
-                        f"failed to create a device from payload for {new_device_id}.",
+                        f"failed to create a device from payload for {new_device_id}",
                         extra={
-                            "payload": json.stringify(payload),
+                            "payload": dumps(payload),
                             "device_id": new_device_id,
                         },
                     )
@@ -290,9 +291,9 @@ class MDEClient:
                     )
                 except KeyError:
                     logger.warning(
-                        "failed to create a vulnerability.",
+                        "failed to create a vulnerability",
                         extra={
-                            "payload": json.stringify(payload),
+                            "payload": dumps(payload),
                             "device_id": new_vulnerability_id,
                         },
                     )
@@ -302,7 +303,7 @@ class MDEClient:
             # The URL given here can be used to fetch the next devices.
             cve_url = json.get("@odata.nextLink")
 
-        logger.info(f"fetched a total of {len(vulnerabilities)} vulnerabilities.")
+        logger.info(f"fetched a total of {len(vulnerabilities)} vulnerabilities")
 
         return vulnerabilities
 
@@ -340,13 +341,13 @@ class MDEClient:
             json = res.json()
 
             new_users = json["value"]
-            logger.debug(f"fetched {len(new_users)} new users.")
+            logger.debug(f"fetched {len(new_users)} new users")
 
             users.extend(user["accountName"] for user in new_users)
 
             users_url = json.get("@odata.nextLink")
 
-        logger.info(f"fetched a total of {len(users)} users.")
+        logger.info(f"fetched a total of {len(users)} users")
 
         return users
 
@@ -399,7 +400,7 @@ class MDEClient:
             recommendation_url = json.get("@odata.nextLink")
 
         logger.info(
-            f"fetched a total of {len(recommendations)} recommendation.",
+            f"fetched a total of {len(recommendations)} recommendation",
             extra={
                 "device_id": device.uuid,
             },
@@ -526,7 +527,7 @@ class MDEDevice:
                 logger.warning(
                     f"""automation "{automation}" is not recognized;
                     can\'t peform a valid "should_skip()" check;
-                    device is skipped.""",
+                    device is skipped""",
                 )
                 return True
 

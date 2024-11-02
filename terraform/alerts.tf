@@ -35,7 +35,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "example" {
     operator                = "GreaterThan"
   }
 
-  description           = "Errors detected in the ${local.repository_name} application"
+  description           = "Errors detected in the ${local.repository_name} azure function"
   skip_query_validation = true
 
   action {

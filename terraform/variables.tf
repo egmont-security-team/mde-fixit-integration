@@ -10,14 +10,14 @@ variable "azure_mde_secret_stag" {
   sensitive = true
 }
 
-variable "fixit_api_key_prod" {
+variable "xurrent_api_key_prod" {
   type = string
-  description = "The secret used for the 4me FixIt Production environment"
+  description = "The secret used for the Xurrent production environment"
   sensitive = true
 }
 
-variable "fixit_api_key_stag" {
+variable "xurrent_api_key_stag" {
   type = string
-  description = "The secret used for the 4me FixIt Staging environment"
+  description = "The secret used for the Xurrent staging environment"
   sensitive = true
 }
