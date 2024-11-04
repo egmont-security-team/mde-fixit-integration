@@ -144,6 +144,12 @@ resource "azurerm_key_vault_secret" "cve_service_instance_id_prod" {
   key_vault_id = azurerm_key_vault.prod.id
 }
 
+resource "azurerm_key_vault_secret" "cve_bio_service_instance_id_prod" {
+  name         = "CVE-BIO-Service-Instance-ID"
+  value        = "73021"
+  key_vault_id = azurerm_key_vault.prod.id
+}
+
 resource "azurerm_key_vault_secret" "cve_sd_team_id_prod" {
   name         = "CVE-SD-Team-ID"
   value        = "8827"
@@ -157,7 +163,7 @@ resource "azurerm_key_vault_secret" "cve_mw_team_id_prod" {
 }
 
 resource "azurerm_key_vault_secret" "cve_sec_team_id_prod" {
-  name         = "CVE-SEC-Team-ID"
+  name         = "CVE-SOC-Team-ID"
   value        = "10659"
   key_vault_id = azurerm_key_vault.prod.id
 }
@@ -224,6 +230,12 @@ resource "azurerm_key_vault_secret" "cve_service_instance_id_stag" {
   key_vault_id = azurerm_key_vault.stag.id
 }
 
+resource "azurerm_key_vault_secret" "cve_bio_service_instance_id_stag" {
+  name         = "CVE-BIO-Service-Instance-ID"
+  value        = "73108"
+  key_vault_id = azurerm_key_vault.stag.id
+}
+
 resource "azurerm_key_vault_secret" "cve_sd_team_id_stag" {
   name         = "CVE-SD-Team-ID"
   value        = "12104"
@@ -237,7 +249,7 @@ resource "azurerm_key_vault_secret" "cve_mw_team_id_stag" {
 }
 
 resource "azurerm_key_vault_secret" "cve_sec_team_id_stag" {
-  name         = "CVE-SEC-Team-ID"
+  name         = "CVE-SOC-Team-ID"
   value        = "24088"
   key_vault_id = azurerm_key_vault.stag.id
 }

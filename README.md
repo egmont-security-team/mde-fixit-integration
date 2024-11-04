@@ -44,29 +44,31 @@ If a device should not be included in a automation, you can give specific tags i
 ### Environment variables
 
 - Set the environment variable `KEY_VAULT_NAME` to change what key vault will be used to load secrets.
-- Set the environment variable `CVE_PC_THRESHOLD` to change how many pc under 1 vulnerability to create a multi ticket.
-- Set the environment variable `CVE_SERVER_THRESHOLD` to change how many servers under 1 vulnerability to create a multi ticket.
+- Set the environment variable `CVE_THRESHOLD` to change how many devices under a vulnerability to create a multi ticket.
+- Set the environment variable `CVE_SERVER_THRESHOLD` to change how many server devices under a vulnerability to create a multi ticket.
 
 ### Secrets
 
 #### MDE
 
-- `MDE_TENANT`: Set this to change what tenant the MDE environment is in.
+- `MDE_TENANT`: The tenant that the MDE environment is in.
 - `MDE_CLIENT_ID`: The client id of the enterprise app for defender.
 - `MDE_SECRET_VALUE`: The secret value of the enterprise app for defender.
 
 #### FixIt
 
-- `FIXIT_4ME_BASE_URL`: The [base URL](https://developer.4me.com/v1/) of the FixIt 4me API (also called service URL)
-- `FIXIT_4ME_ACCOUNT`: The FxiIt 4me account which we check.
-- `FIXIT_4ME_API_KEY`: The API key with the right permission from the [Access needed](#access-needed) section.
-- `FIXIT_SINGLE_TEMPLATE_ID`: The template ID of the single vulnerable device template.
-- `FIXIT_MULTI_TEMPLATE_ID`: The template ID of the a multiple vulnerable devices template.
-- `FIXIT_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created.
-- `FIXIT_SD_TEAM_ID`: The team ID of the service desk team.
-- `FIXIT_MW_TEAM_ID`: The team ID of the modern workplace team.
-- `FIXIT_SEC_TEAM_ID`: The team ID of the security team.
-- `FIXIT_CAD_TEAM_ID`: The team ID of the cloud advisory and delivery team.
+- `XURRENT_4ME_BASE_URL`: The [base URL](https://developer.4me.com/v1/) of the FixIt 4me API (also called service URL)
+- `XURRENT_4ME_ACCOUNT`: The 4me account used (tenant).
+- `XURRENT_4ME_API_KEY`: The API key with the right permission from the [Access needed](#access-needed) section.
+
+- `CVE_SINGLE_TEMPLATE_ID`: The template ID of the single vulnerable device template.
+- `CVE_MULTI_TEMPLATE_ID`: The template ID of the a multiple vulnerable devices template.
+- `CVE_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created.
+- `CVE_BIO_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created for BIO devices.
+- `CVE_SD_TEAM_ID`: The team ID of the service desk team.
+- `CVE_MW_TEAM_ID`: The team ID of the modern workplace team.
+- `CVE_SEC_TEAM_ID`: The team ID of the security team.
+- `CVE_CAD_TEAM_ID`: The team ID of the cloud advisory and delivery team.
 
 ### Access needed
 
