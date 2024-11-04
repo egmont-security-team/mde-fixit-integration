@@ -121,7 +121,7 @@ def proccess_single_devices(
     mde_client : MDEClient
         A client to interact with MDE.
     fixit_client : FixItClient
-        A Client to interact with FixIt.
+        A client to interact with FixIt.
 
     Returns
     -------
