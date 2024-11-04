@@ -315,8 +315,9 @@ def proccess_multiple_devices(
         else:
             request_config["team"] = os.environ["CVE_MW_TEAM_ID"]
 
+        ticket_id = f"{vulnerability.cve_id} - {vulnerability.cve_score}"
         fixit_res = fixit_client.create_request(
-            f"Security[{vulnerability.cve_id} - {vulnerability.cve_score}]: Multiple Vulnerable Devices",  # noqa: E501
+            f"Security[{ticket_id}]: Multiple Vulnerable Devices", 
             **request_config,
         )
 
@@ -505,6 +506,7 @@ def create_csv_file(file_name: str, devices: list[MDEDevice]) -> str:
 
     if not file_name.endswith(".csv"):
         file_name += ".csv"
+
     file_path = os.path.join(target_dir, file_name)
 
     with open(file_path, "w+", encoding="utf8") as file:
@@ -536,7 +538,7 @@ def has_open_ticket(vulnerability: MDEVulnerability, open_multi_requests: Any) -
     vulnerability : MDEVulnerability
         The vulnerability
 
-    open_multi_requests : any
+    open_multi_requests : Any
         All opem multi requests
 
     Returns
