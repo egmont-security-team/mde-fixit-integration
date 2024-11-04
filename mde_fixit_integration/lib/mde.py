@@ -247,7 +247,7 @@ class MDEClient:
         | where VulnerabilitySeverityLevel == 'Critical'
         | join kind=inner (
             DeviceTvmSoftwareVulnerabilitiesKB
-            | where PublishedDate <= datetime_add('day', -25, now())
+            | where PublishedDate <= datetime_add('day', -40, now())
             | project CveId, VulnerabilityDescription, CvssScore
         ) on CveId
         | join kind=inner (
