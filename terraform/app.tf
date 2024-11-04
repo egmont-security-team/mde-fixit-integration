@@ -48,7 +48,7 @@ resource "azurerm_service_plan" "plan" {
   resource_group_name = azurerm_resource_group.app.name
 
   os_type  = "Linux"
-  sku_name = "Y1"
+  sku_name = "EP1"
 
   lifecycle {
     ignore_changes = [
@@ -105,7 +105,7 @@ resource "azurerm_linux_function_app" "app" {
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : azurerm_key_vault.prod.name,
-    "CVE_PC_THRESHOLD" : 20,
+    "CVE_THRESHOLD" : 20,
     "CVE_SERVER_THRESHOLD" : 5,
   }
 
@@ -164,7 +164,7 @@ resource "azurerm_linux_function_app_slot" "stag" {
     "SCM_DO_BUILD_DURING_DEPLOYMENT" : 1,
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : azurerm_key_vault.stag.name,
-    "CVE_PC_THRESHOLD" : 10,
+    "CVE_THRESHOLD" : 10,
     "CVE_SERVER_THRESHOLD" : 5,
   }
 
