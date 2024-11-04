@@ -3,7 +3,6 @@
 FROM python:slim-bookworm
 
 LABEL maintainer="daekjo@egmont.com" \
-      version="1.0" \
       description="MDE & Fix-It integration"
 
 WORKDIR /app
