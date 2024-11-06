@@ -51,24 +51,24 @@ If a device should not be included in a automation, you can give specific tags i
 
 #### MDE
 
-- `MDE_TENANT`: The tenant that the MDE environment is in.
-- `MDE_CLIENT_ID`: The client id of the enterprise app for defender.
-- `MDE_SECRET_VALUE`: The secret value of the enterprise app for defender.
+- `Azure-MDE-Tenant`: The tenant that the MDE environment is in.
+- `Azure-MDE-Client-ID`: The client id of the enterprise app for defender.
+- `Azure-MDE-Secret-Value`: The secret value of the enterprise app for defender.
 
 #### FixIt
 
-- `XURRENT_4ME_BASE_URL`: The [base URL](https://developer.4me.com/v1/) of the FixIt 4me API (also called service URL)
-- `XURRENT_4ME_ACCOUNT`: The 4me account used (tenant).
-- `XURRENT_4ME_API_KEY`: The API key with the right permission from the [Access needed](#access-needed) section.
+- `Xurrent-Base-URL`: The [base URL](https://developer.4me.com/v1/) of the FixIt 4me API (also called service URL)
+- `Xurrent-Account`: The 4me account used (tenant).
+- `Xurrent-API-Key`: The API key with the right permission from the [Access needed](#access-needed) section.
 
-- `CVE_SINGLE_TEMPLATE_ID`: The template ID of the single vulnerable device template.
-- `CVE_MULTI_TEMPLATE_ID`: The template ID of the a multiple vulnerable devices template.
-- `CVE_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created.
+- `CVE-Single-Template-ID`: The template ID of the single vulnerable device template.
+- `CVE-Multi-Template-ID`: The template ID of the a multiple vulnerable devices template.
+- `CVE-Service-Instance-ID`: The service instance of where the requests will be created.
 - `CVE_BIO_SERVICE_INSTANCE_ID`: The service instance of where the requests will be created for BIO devices.
-- `CVE_SD_TEAM_ID`: The team ID of the service desk team.
-- `CVE_MW_TEAM_ID`: The team ID of the modern workplace team.
-- `CVE_SEC_TEAM_ID`: The team ID of the security team.
-- `CVE_CAD_TEAM_ID`: The team ID of the cloud advisory and delivery team.
+- `CVE-SD-Team-ID`: The team ID of the service desk team.
+- `CVE-MW-Team-ID`: The team ID of the modern workplace team.
+- `CVE-SOC-Team-ID`: The team ID of the security team.
+- `CVE-CAD-Team-ID`: The team ID of the cloud advisory and delivery team.
 
 ### Access needed
 

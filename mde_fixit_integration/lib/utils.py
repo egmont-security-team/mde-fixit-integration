@@ -38,7 +38,7 @@ def get_secret(
     secret = secret_client.get_secret(secret_name)
 
     if secret.value is None:
-        raise ValueError(f'Secret "{secret_name}" not found in the key vault.')
+        raise ValueError(f'missing secret {secret_name}; not found in key vault')
 
     env_var = secret_name.upper().replace("-", "_").replace(" ", "_")
     os.environ[env_var] = secret.value
@@ -47,19 +47,24 @@ def get_secret(
 
 
 def create_environment(credential: DefaultAzureCredential) -> None:
-    """
+    r"""
     Create the environment variables from the secrets in the key vault.
 
     Parameters
     ----------
     credential : DefaultAzureCredential
         The credential to authenticate with.
+    
+    Raises
+    ------
+    OSError
+        If "KEY_VAULT_NAME" is not present in environment variables
 
     """
     try:
         key_vault_name = os.environ["KEY_VAULT_NAME"]
     except KeyError:
-        logger.critical(
+        raise OSError(
             """
             did not find valid value for environment variable \"KEY_VAULT_NAME\";
             please set this in 
@@ -67,7 +72,6 @@ def create_environment(credential: DefaultAzureCredential) -> None:
             or in application settings in Azure.
             """,
         )
-        return
 
     sc = SecretClient(
         vault_url=f"https://{key_vault_name}.vault.azure.net",
@@ -87,6 +91,7 @@ def create_environment(credential: DefaultAzureCredential) -> None:
     get_secret(sc, "CVE-Single-Template-ID")
     get_secret(sc, "CVE-Multi-Template-ID")
     get_secret(sc, "CVE-Service-Instance-ID")
+    get_secret(sc, "CVE-BIO-Service-Instance-ID")
     get_secret(sc, "CVE-SD-Team-ID")
     get_secret(sc, "CVE-MW-Team-ID")
     get_secret(sc, "CVE-SOC-Team-ID")

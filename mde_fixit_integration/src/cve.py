@@ -155,8 +155,8 @@ def proccess_single_devices(
         )
 
         request_config: dict[str, Any] = {
-            "service_instance_id": os.environ["FIXIT_SERVICE_INSTANCE_ID"],
-            "template_id": os.environ["FIXIT_SINGLE_TEMPLATE_ID"],
+            "service_instance_id": os.environ["CVE_SERVICE_INSTANCE_ID"],
+            "template_id": os.environ["CVE_SINGLE_TEMPLATE_ID"],
             "custom_fields": [
                 {"id": "cve_page", "value": cve_page},
                 {"id": "cve_id", "value": vulnerability.cve_id},
@@ -173,7 +173,7 @@ def proccess_single_devices(
         }
 
         if len(recommendations) == 0:
-            request_config["team"] = os.environ["CVE_SEC_TEAM_ID"]
+            request_config["team"] = os.environ["CVE_SOC_TEAM_ID"]
         elif device.is_server():
             request_config["team"] = os.environ["CVE_CAD_TEAM_ID"]
         else:
@@ -238,7 +238,7 @@ def proccess_multiple_devices(
     """
     multi_fixit_tickets: int = 0
 
-    fixit_multi_template_id = os.environ["FIXIT_MULTI_TEMPLATE_ID"]
+    fixit_multi_template_id = os.environ["CVE_MULTI_TEMPLATE_ID"]
     open_multi_requests = fixit_client.list_requests(
         query_filter=f"status=assigned&template={fixit_multi_template_id}",
     )
