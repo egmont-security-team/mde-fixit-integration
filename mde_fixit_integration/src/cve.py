@@ -16,7 +16,7 @@ from typing import Any
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 
-from mde_fixit_integration.lib.fixit import FixItClient
+from mde_fixit_integration.lib.xurrent import XurrentClient
 from mde_fixit_integration.lib.mde import MDEClient, MDEDevice, MDEVulnerability
 from mde_fixit_integration.lib.utils import create_environment, get_cve_from_str
 
@@ -57,7 +57,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         os.environ["AZURE_MDE_CLIENT_ID"],
         os.environ["AZURE_MDE_SECRET_VALUE"],
     )
-    fixit_client = FixItClient(
+    fixit_client = XurrentClient(
         os.environ["XURRENT_BASE_URL"],
         os.environ["XURRENT_ACCOUNT"],
         os.environ["XURRENT_API_KEY"],
@@ -106,7 +106,7 @@ def proccess_single_devices(
     single_vulnerable_devices: dict[str, MDEVulnerability],
     devices: list[MDEDevice],
     mde_client: MDEClient,
-    fixit_client: FixItClient,
+    fixit_client: XurrentClient,
 ) -> int:
     """
     Process single vulnerable devices.
@@ -117,11 +117,11 @@ def proccess_single_devices(
         The single vulnerable devices.
         The key is the device UUID and the value is the vulnerability.
     devices : list[MDEDevice]
-        A list of the devices to map against.
+        List of the devices to map against.
     mde_client : MDEClient
-        A client to interact with MDE.
+        Client to interact with MDE.
     fixit_client : FixItClient
-        A client to interact with FixIt.
+        Client to interact with FixIt.
 
     Returns
     -------
@@ -180,7 +180,7 @@ def proccess_single_devices(
             request_config["team"] = os.environ["CVE_SD_TEAM_ID"]
 
         ticket_id = f"{vulnerability.cve_id} - {vulnerability.cve_score}"
-        fixit_res = fixit_client.create_request(
+        fixit_res = fixit_client.create_ticket(
             f"Security[{ticket_id}]: Single Vulnerable Device",
             **request_config,
         )
@@ -196,13 +196,13 @@ def proccess_single_devices(
 
         single_fixit_tickets += 1
 
-        fixit_id = fixit_res["id"]
-        if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
+        ticket_id = fixit_res["id"]
+        if not mde_client.alter_device_tag(device, f"#{ticket_id}", "Add"):
             logger.error(
-                f'failed to give {device} tag "#{fixit_id}"',
+                f'failed to give {device} tag "#{ticket_id}"',
                 extra={
                     "device": str(device),
-                    "fixit_tag": fixit_id,
+                    "ticket_tag": ticket_id,
                 },
             )
 
@@ -213,7 +213,7 @@ def proccess_multiple_devices(
     multi_vulnerable_devices: dict[str, MDEVulnerability],
     devices: list[MDEDevice],
     mde_client: MDEClient,
-    fixit_client: FixItClient,
+    fixit_client: XurrentClient,
 ) -> int:
     """
     Process multi vulnerable devices.
@@ -221,14 +221,14 @@ def proccess_multiple_devices(
     Parameters
     ----------
     multi_vulnerable_devices : dict[str, MDEVulnerability]
-        The multi vulnerable devices.
-        The key is the vulnerability CVE ID and the value is the vulnerability.
+        Multi vulnerable devices.
+        Key is the CVE ID and the value is the vulnerability.
     devices : list[MDEDevice]
-            The list of all devices.
+        List of all devices.
     mde_client : MDEClient
-            The MDE client to interact with the MDE API.
+        Client to interact with the MDE API.
     fixit_client : FixItClient
-            The FixIt client to interact with the FixIt API.
+       Client to interact with the FixIt API.
 
     Returns
     -------
@@ -239,7 +239,7 @@ def proccess_multiple_devices(
     multi_fixit_tickets: int = 0
 
     fixit_multi_template_id = os.environ["CVE_MULTI_TEMPLATE_ID"]
-    open_multi_requests = fixit_client.list_requests(
+    open_multi_requests = fixit_client.list_tickets(
         query_filter=f"status=assigned&template={fixit_multi_template_id}",
     )
 
@@ -270,7 +270,7 @@ def proccess_multiple_devices(
             if should_skip_device(
                 device,
                 vulnerability.cve_id,
-                check_fixit_request=False,
+                check_fixit_ticket=False,
             ):
                 continue
 
@@ -316,7 +316,7 @@ def proccess_multiple_devices(
             request_config["team"] = os.environ["CVE_MW_TEAM_ID"]
 
         ticket_id = f"{vulnerability.cve_id} - {vulnerability.cve_score}"
-        fixit_res = fixit_client.create_request(
+        fixit_res = fixit_client.create_ticket(
             f"Security[{ticket_id}]: Multiple Vulnerable Devices", 
             **request_config,
         )
@@ -332,14 +332,14 @@ def proccess_multiple_devices(
 
         multi_fixit_tickets += 1
 
-        fixit_id = fixit_res["id"]
+        ticket_id = fixit_res["id"]
         for device in vulnerable_devices:
-            if not mde_client.alter_device_tag(device, f"#{fixit_id}", "Add"):
+            if not mde_client.alter_device_tag(device, f"#{ticket_id}", "Add"):
                 logger.error(
-                    f'failed to give {device} tag "#{fixit_id}"',
+                    f'failed to give {device} tag "#{ticket_id}"',
                     extra={
                         "device": str(device),
-                        "fixit_id": fixit_id,
+                        "ticket_id": ticket_id,
                     },
                 )
 
@@ -428,7 +428,7 @@ def should_skip_device(
     check_should_skip: bool = True,
     check_health: bool = True,
     check_onboarding_status: bool = True,
-    check_fixit_request: bool = True,
+    check_fixit_ticket: bool = True,
 ) -> bool:
     """
     Check if a device should be skipped for the CVE automation.
@@ -447,8 +447,8 @@ def should_skip_device(
         If the device should be checked for health status.
     check_onboarding_status : bool
         If the device should be checked for onboarding status.
-    check_fixit_request : bool
-        If the device should be checked for FixIt requests tags.
+    check_fixit_ticket : bool
+        If the device should be checked for FixIt ticket tags.
 
     Returns
     -------
@@ -456,25 +456,29 @@ def should_skip_device(
         True if the device should be skipped.
 
     """
-    if check_first_seen and not device.first_seen < (
-        datetime.now(UTC) - timedelta(days=7)
-    ):  # noqa: E501
+    # Skip if device is not older than 1 week
+    one_week_back = datetime.now(UTC) - timedelta(days=7)
+    if check_first_seen and not device.first_seen < one_week_back:
         logger.debug(f"skipping {device}; not registered for more than 7 days")
         return True
 
+    # Skip if device is marked for skipping
     if check_should_skip and device.should_skip("CVE", cve=cve_id):
         logger.debug(f"skipping {device}; tags indicate it should be skipped")
         return True
 
+    # Skip if device is inactive 
     if check_health and device.health == "Inactive":
         logger.debug(f'skipping {device}; health is "{device.health}"')
         return True
 
+    # Skip if device is not onboarded yet
     if check_onboarding_status and device.onboarding_status != "Onboarded":
         logger.debug(f"skipping {device}; not onboarded yet")
         return True
 
-    if check_fixit_request and any(FixItClient.extract_id(tag) for tag in device.tags):
+    # Skip if has any FixIt tag (does not check of ticket is complete)
+    if check_fixit_ticket and any(XurrentClient.extract_id(tag) for tag in device.tags):
         logger.debug(f"skipping {device}; has a ticket tag")
         return True
 
@@ -529,25 +533,24 @@ def create_csv_file(file_name: str, devices: list[MDEDevice]) -> str:
     return file_path
 
 
-def has_open_ticket(vulnerability: MDEVulnerability, open_multi_requests: Any) -> bool:
+def has_open_ticket(vulnerability: MDEVulnerability, open_multi_tickets: Any) -> bool:
     """
-    Wether a request already has an open ticket.
+    Wether a ticket already has an open ticket.
 
     Parameters
     ----------
     vulnerability : MDEVulnerability
         The vulnerability
-
-    open_multi_requests : Any
-        All opem multi requests
+    open_multi_tickets : Any
+        All open multi tickets
 
     Returns
     -------
     bool
-        Wether the request already exists
+        Wether the ticket already exists
 
     """
     return any(
         get_cve_from_str(req["subject"]) == vulnerability.cve_id
-        for req in open_multi_requests
+        for req in open_multi_tickets
     )

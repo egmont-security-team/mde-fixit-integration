@@ -38,7 +38,7 @@ def get_secret(
     secret = secret_client.get_secret(secret_name)
 
     if secret.value is None:
-        raise ValueError(f'missing secret {secret_name}; not found in key vault')
+        raise ValueError(f"missing secret {secret_name}; not found in key vault")
 
     env_var = secret_name.upper().replace("-", "_").replace(" ", "_")
     os.environ[env_var] = secret.value
@@ -53,7 +53,7 @@ def create_environment(credential: DefaultAzureCredential) -> None:
     Parameters
     ----------
     credential : DefaultAzureCredential
-        The credential to authenticate with.
+        Credential to authenticate with.
     
     Raises
     ------
@@ -67,10 +67,8 @@ def create_environment(credential: DefaultAzureCredential) -> None:
         raise OSError(
             """
             did not find valid value for environment variable \"KEY_VAULT_NAME\";
-            please set this in 
-                \"local.settings.json\"
-            or in application settings in Azure.
-            """,
+            set this in \"local.settings.json\" or in application settings in Azure
+            """
         )
 
     sc = SecretClient(
@@ -108,7 +106,7 @@ def get_cve_from_str(string: str) -> Optional[str]:
     Parameters
     ----------
     string : str
-        The string to extract the CVE from.
+        String to extract the CVE from.
 
     Returns
     -------

@@ -18,17 +18,17 @@ from tenacity import (
 logger = logging.getLogger(__name__)
 
 
-class FixItClient:
-    """A client that can interact with the FixIt API."""
+class XurrentClient:
+    """A client that can interact with the Xurrent API."""
 
     base_url: str
-    fixit_4me_account: str
+    xurrent_account: str
     api_key: str
 
     def __init__(
         self,
         base_url: str,
-        fixit_4me_account: str,
+        xurrent_account: str,
         api_key: str,
     ) -> None:
         """
@@ -37,34 +37,34 @@ class FixItClient:
         Parameters
         ----------
         base_url : str
-            The base URL of the FixIt 4me REST API.
-        fixit_4me_account : str
-            The FixIt 4me account to use.
+            Base URL of the FixIt 4me REST API.
+        xurrent_account : str
+            Xurrent account to use.
         api_key : str
-            The API key to use for the FixIt client.
+            API key to use for the FixIt client.
 
         """
         self.base_url = base_url
-        self.fixit_4me_account = fixit_4me_account
+        self.xurrent_account = xurrent_account
         self.api_key = api_key
 
     @staticmethod
     def extract_id(string: str) -> Optional[str]:
         """
-        Extra a request ID from a string.
+        Extract a ticket ID from a string.
 
-        Gets the FixIt request ID from a given string (if it's a prober FixIt tag).
+        Gets the ticket ID from a given string (if it's a prober ticket tag).
         This uses regular expression to find the tag.
 
         Parameters
         ----------
         string : str
-            The string to extract the FixIt request ID from.
+            The string to extract the ticket ID from.
 
         Returns
         -------
         str
-            The FixIt request ID from the tag.
+            The ticket ID from the tag.
 
         """
         # If this regular expression does not match, it is not a FixIt tag.
@@ -84,25 +84,25 @@ class FixItClient:
         retry_error_callback=lambda _: None,
         reraise=True,
     )
-    def get_request_status(self, request_id: str) -> str:
+    def get_ticket_status(self, ticket_id: str) -> str:
         """
-        Get the status of a request.
+        Get the status of a ticket.
 
         Parameters
         ----------
-        request_id : str
-            The request id of the request to check (e.g #9999999).
+        ticket_id : str
+            Ticket ID of the ticket to check (e.g #9999999).
 
         Returns
         -------
         str
-            The status of the request.
+            The status of the ticket.
 
         """
         res = requests.get(
-            f"{self.base_url}/requests/{request_id}",
+            f"{self.base_url}/requests/{ticket_id}",
             headers={
-                "X-4me-Account": self.fixit_4me_account,
+                "X-4me-Account": self.xurrent_account,
                 "Authorization": f"Bearer {self.api_key}",
             },
             timeout=120,
@@ -121,25 +121,25 @@ class FixItClient:
         retry_error_callback=lambda _: None,
         reraise=True,
     )
-    def create_request(
+    def create_ticket(
         self,
         subject: str,
         **kwargs,
     ) -> Any:
         """
-        Create a request.
+        Create a ticket.
 
         Parameters
         ----------
         subject : str
-            Subject of the request.
+            Subject of the ticket.
         **kwargs : dict
-            Other parameters to pass to the request.
+            Other parameters to pass to the ticket.
 
         Returns
         -------
         any
-            The JSON object of the response.
+            JSON object of the response.
 
         """
         payload = {"subject": subject}
@@ -149,7 +149,7 @@ class FixItClient:
         res = requests.post(
             f"{self.base_url}/requests",
             headers={
-                "X-4me-Account": self.fixit_4me_account,
+                "X-4me-Account": self.xurrent_account,
                 "Authorization": f"Bearer {self.api_key}",
             },
             json=payload,
@@ -168,9 +168,9 @@ class FixItClient:
         retry_error_callback=lambda _: None,
         reraise=True,
     )
-    def list_requests(self, query_filter: Optional[str] = None) -> list[Any]:
+    def list_tickets(self, query_filter: Optional[str] = None) -> list[Any]:
         """
-        Get a list of all requests in the account.
+        Get a list of all tickets in the account.
 
         Parameters
         ----------
@@ -180,10 +180,10 @@ class FixItClient:
         Returns
         -------
         list[Any]
-            The list of requests.
+            The list of tickets.
 
         """
-        all_requests = []
+        all_tickets = []
 
         query_filter = f"?{query_filter}" if query_filter else ""
         url = f"{self.base_url}/requests/open{query_filter}"
@@ -192,7 +192,7 @@ class FixItClient:
             res = requests.get(
                 url,
                 headers={
-                    "X-4me-Account": self.fixit_4me_account,
+                    "X-4me-Account": self.xurrent_account,
                     "Authorization": f"Bearer {self.api_key}",
                 },
                 timeout=300,
@@ -200,7 +200,7 @@ class FixItClient:
 
             res.raise_for_status()
 
-            all_requests.extend(res.json())
+            all_tickets.extend(res.json())
 
             url = next(
                 (
@@ -213,7 +213,7 @@ class FixItClient:
                 None,
             )
 
-        return all_requests
+        return all_tickets
 
     def get_attachments_storage(self) -> Any:
         """
@@ -222,13 +222,13 @@ class FixItClient:
         Returns
         -------
         Any
-            The storage information for the FixIt attachments.
+            Storage information for attachments.
 
         """
         res = requests.get(
             f"{self.base_url}/attachments/storage",
             headers={
-                "X-4me-Account": self.fixit_4me_account,
+                "X-4me-Account": self.xurrent_account,
                 "Authorization": f"Bearer {self.api_key}",
             },
             timeout=300,
@@ -245,7 +245,7 @@ class FixItClient:
         Parameters
         ----------
         file_path : str
-            The file to upload.
+            File path of file to upload.
 
         Returns
         -------

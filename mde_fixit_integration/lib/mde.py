@@ -44,11 +44,11 @@ class MDEClient:
         Parameters
         ----------
         azure_mde_tenant : str
-            The Azure tenant ID for Microsoft Defender for Endpoint.
+            Azure tenant ID for Microsoft Defender for Endpoint.
         azure_mde_client_id : str
-            The Azure client ID for Microsoft Defender for Endpoint.
+            Azure client ID for Microsoft Defender for Endpoint.
         azure_mde_secret_value : str
-            The Azure secret value for Microsoft Defender for Endpoint.
+            Azure secret value for Microsoft Defender for Endpoint.
         authenticate : bool
             True if it should authenticate with MDE.
 
@@ -105,11 +105,11 @@ class MDEClient:
         Parameters
         ----------
         device : MDEDevice
-            The device to alter the tag from.
+            Device to alter the tag from.
         tag : str
-            The tag to alter.
+            Tag to alter.
         action : Literal["Add", "Remove"]:
-            The actions to perform.
+            Action to perform.
 
         Returns
         -------
@@ -159,7 +159,7 @@ class MDEClient:
         Parameters
         ----------
         odata_filter : Optional[str]
-            An OData filter to filter the devices.
+            OData filter to filter the devices.
 
         Returns
         -------
@@ -368,9 +368,9 @@ class MDEClient:
         Parameters
         ----------
         device : MDEDevice
-            The device to get recommendations for.
+            Device to get recommendations for.
         odata_filter : str
-            The OData filter to filter the recommendations.
+            OData filter to filter the recommendations.
 
         Returns
         -------
@@ -506,9 +506,9 @@ class MDEDevice:
         Parameters
         ----------
         automation : str
-            The name of the automation to skip. The names can be found above.
+            Name of the automation to skip. The names can be found above.
         cve : None | str
-            If there is a certain CVE that should be included in skip check.
+            CVE to include in skip check.
 
         Returns
         -------

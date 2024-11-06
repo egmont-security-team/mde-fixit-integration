@@ -8,14 +8,15 @@ from devices once their associated requests are completed.
 
 __copyright__ = "Copyright (C) 2024 Egmont IT"
 
+from functools import cache
 import logging
 import os
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 
-from mde_fixit_integration.lib.fixit import FixItClient
-from mde_fixit_integration.lib.mde import MDEClient
+from mde_fixit_integration.lib.xurrent import XurrentClient
+from mde_fixit_integration.lib.mde import MDEClient, MDEDevice
 from mde_fixit_integration.lib.utils import create_environment
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
         os.environ["AZURE_MDE_CLIENT_ID"],
         os.environ["AZURE_MDE_SECRET_VALUE"],
     )
-    fixit_client = FixItClient(
+    fixit_client = XurrentClient(
         os.environ["XURRENT_BASE_URL"],
         os.environ["XURRENT_ACCOUNT"],
         os.environ["XURRENT_API_KEY"],
@@ -71,8 +72,6 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
         logger.critical("task won't continue as there is no devices to process")
         return
 
-    request_status_cache: dict[str, str] = {}
-
     removed_tags = 0
 
     for device in devices:
@@ -80,29 +79,14 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
             continue
 
         for tag in device.tags:
-            request_id = FixItClient.extract_id(tag)
-
-            if not request_id:
+            ticket_id = XurrentClient.extract_id(tag)
+            if not ticket_id:
                 continue
 
-            if request_id not in request_status_cache:
-                if request_status_cache.get(request_id):
-                    continue
+            request_status = get_ticket_status(
+                fixit_client, ticket_id, device
+            )
 
-                request_status = fixit_client.get_request_status(request_id)
-                if request_status is None:
-                    logger.warning(
-                        f"failed to fetch the status of the ticket #{request_id}",
-                        extra={
-                            "device": str(device),
-                            "fixit_id": request_id,
-                        },
-                    )
-                    continue
-
-                request_status_cache[request_id] = request_status
-
-            request_status = request_status_cache[request_id]
             if request_status != "completed":
                 continue
 
@@ -110,3 +94,44 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
                 removed_tags += 1
 
     logger.info(f"finished removing {removed_tags} tags from devices")
+
+
+@cache
+def get_ticket_status(
+    xurrent_client: XurrentClient,
+    ticket_id: str,
+    device: MDEDevice
+) -> str | None:
+    """
+    Get status of a ticket.
+
+    Parameters
+    ----------
+    xurrent_client : XurrentClient
+        Client to interact with Xurrent's API.
+    ticket_id : str
+        ID of the ticket to fetch the status of.
+    device : MDEDevice
+        Device wich is currently being proccesed.
+
+    Returns
+    -------
+    str
+        The status of the ticket.
+    None
+        If the ticket was not found.
+
+    """
+    ticket_status = xurrent_client.get_ticket_status(ticket_id)
+
+    if ticket_status is None:
+        logger.warning(
+            f"failed to fetch the status of the ticket #{ticket_id}",
+            extra={
+                "device": str(device),
+                "ticket_id": ticket_id,
+            },
+        )
+        return None
+
+    return ticket_status

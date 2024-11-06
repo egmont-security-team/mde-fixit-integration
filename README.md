@@ -4,19 +4,19 @@ A Azure Function that uses data from Microsoft Defender and FixIt to automate ce
 
 ## Automations
 
-- [Cleanup FixIt Tags](#ddc2-cleanup-fixit-tags): Removes FixIt tags from devices if the FixIt requests is completed.
+- [Cleanup FixIt Tags](#ddc2-cleanup-fixit-tags): Removes FixIt tags from devices if the ticket is completed.
 
 - [Inactive Devices](#ddc3-inactive-devices): Adds `ZZZ` tags to duplicate devices in the Defender Portal.
 
-- [Critical Exposure Tickets](#cve-critical-exposed-devices): Create a FixIt request for devices hit by `critical` CVEs.
+- [Critical Exposure Tickets](#cve-critical-exposed-devices): Creates a ticket for devices hit by `critical` CVEs.
 
 ### Detailed description
 
 #### DDC2: Cleanup FixIt tags
 
-This checks all devices for FixIt tags and then checks if the ticket referenced by the tag is completed. If the FixIt request is completed, the tag is removed from the device.
+This checks all devices for FixIt tags and then checks if the ticket referenced by the tag is completed. If the ticket is completed, the tag is removed from the device.
 
-This checks all devices for FixIt tags and then checks if the referenced tag is closed in the FixIt portal. If the FixIt request referenced by the tag on the device is closed, the tag is removed from the device.
+This checks all devices for FixIt tags and then checks if the referenced tag is closed in the FixIt portal. If the ticket referenced by the tag on the device is closed, the tag is removed from the device.
 
 #### DDC3: Inactive Devices
 
@@ -55,7 +55,7 @@ If a device should not be included in a automation, you can give specific tags i
 - `Azure-MDE-Client-ID`: The client id of the enterprise app for defender.
 - `Azure-MDE-Secret-Value`: The secret value of the enterprise app for defender.
 
-#### FixIt
+#### Xurrent
 
 - `Xurrent-Base-URL`: The [base URL](https://developer.4me.com/v1/) of the FixIt 4me API (also called service URL)
 - `Xurrent-Account`: The 4me account used (tenant).
@@ -72,7 +72,7 @@ If a device should not be included in a automation, you can give specific tags i
 
 ### Access needed
 
-**The access for FixIt:** You need an API token that can read and write/create requests.
+**The access for Xurrent:** You need an API token that can read and write/create requests.
 
 **The access for Microsoft Defender:** You need the scopes below:
 
