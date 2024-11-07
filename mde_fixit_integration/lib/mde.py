@@ -137,7 +137,6 @@ class MDEClient:
         res = self._make_request(
             f"https://login.microsoftonline.com/{self.azure_mde_tenant}/oauth2/v2.0/token",
             requests.post,
-            authorized_endpoint=False,
             data={
                 "grant_type": "client_credentials",
                 "client_id": self.azure_mde_client_id,
