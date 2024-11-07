@@ -65,7 +65,6 @@ class MDEClient:
         self,
         url: str,
         method: Callable[..., requests.Response],
-        authorized_endpoint: bool = True,
         **kwargs,
     ) -> requests.Response:
 
@@ -85,7 +84,6 @@ class MDEClient:
             return self._make_request(
                 url,
                 method,
-                authorized_endpoint,
                 **kwargs,
             )
 
