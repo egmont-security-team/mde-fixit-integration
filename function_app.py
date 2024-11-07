@@ -13,9 +13,10 @@ if conn := os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING"):
     # logs unwanted and duplicate messages.
     # https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/monitor/azure-monitor-opentelemetry#logging-issues
 
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
+    # Stop duplicate logs
+    logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.CRITICAL)
+    # Stop unwated logs
+    logging.getLogger("azure.monitor.opentelemetry.exporter.export").setLevel(logging.WARNING)
 
     configure_azure_monitor(connection_string=conn)
 
