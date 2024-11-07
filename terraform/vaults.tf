@@ -108,19 +108,19 @@ resource "azurerm_key_vault_secret" "azure_mde_secret_value_prod" {
   key_vault_id = azurerm_key_vault.prod.id
 }
 
-resource "azurerm_key_vault_secret" "fixit_4me_base_url_prod" {
+resource "azurerm_key_vault_secret" "xurrent_base_url_prod" {
   name         = "Xurrent-Base-URL"
   value        = "https://api.4me.com/v1"
   key_vault_id = azurerm_key_vault.prod.id
 }
 
-resource "azurerm_key_vault_secret" "fixit_4me_account_prod" {
+resource "azurerm_key_vault_secret" "xurrent_account_prod" {
   name         = "Xurrent-Account"
   value        = "egmont-it"
   key_vault_id = azurerm_key_vault.prod.id
 }
 
-resource "azurerm_key_vault_secret" "fixit_4me_api_key_prod" {
+resource "azurerm_key_vault_secret" "xurrent_api_key_prod" {
   name         = "Xurrent-API-Key"
   value        = var.xurrent_api_key_prod
   key_vault_id = azurerm_key_vault.prod.id
@@ -194,19 +194,19 @@ resource "azurerm_key_vault_secret" "azure_mde_secret_value_stag" {
   key_vault_id = azurerm_key_vault.stag.id
 }
 
-resource "azurerm_key_vault_secret" "fixit_4me_base_url_stag" {
+resource "azurerm_key_vault_secret" "xurrent_base_url_stag" {
   name         = "Xurrent-Base-URL"
   value        = "https://api.4me.qa/v1"
   key_vault_id = azurerm_key_vault.stag.id
 }
 
-resource "azurerm_key_vault_secret" "fixit_4me_account_stag" {
+resource "azurerm_key_vault_secret" "xurrent_account_stag" {
   name         = "Xurrent-Account"
   value        = "egmont-it-new"
   key_vault_id = azurerm_key_vault.stag.id
 }
 
-resource "azurerm_key_vault_secret" "fixit_4me_api_key_stag" {
+resource "azurerm_key_vault_secret" "xurrent_api_key_stag" {
   name         = "Xurrent-API-Key"
   value        = var.xurrent_api_key_stag
   key_vault_id = azurerm_key_vault.stag.id

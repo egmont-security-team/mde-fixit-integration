@@ -1,0 +1,13 @@
+__pycache__
+.pytest_cache
+.ruff_cache
+.azurite
+.github
+.venv
+.vscode
+terraform
+tests
+.env
+.gitignore
+local.settings.json
+ruff.toml
