@@ -36,7 +36,6 @@ class MDEClient:
         azure_mde_tenant: str,
         azure_mde_client_id: str,
         azure_mde_secret_value: str,
-        authenticate=True,
     ):
         """
         Create a new client to interact with the MDE API.
@@ -49,16 +48,12 @@ class MDEClient:
             Azure client ID for Microsoft Defender for Endpoint.
         azure_mde_secret_value : str
             Azure secret value for Microsoft Defender for Endpoint.
-        authenticate : bool
-            True if it should authenticate with MDE.
 
         """
         self.azure_mde_tenant = azure_mde_tenant
         self.azure_mde_client_id = azure_mde_client_id
         self.azure_mde_secret_value = azure_mde_secret_value
-
-        if authenticate:
-            self.authenticate()
+        self.api_token = self.authenticate()
 
     def _make_request(
         self,
@@ -78,7 +73,7 @@ class MDEClient:
         if extra_headers := kwargs.pop("headers", None):
             headers.update(extra_headers)
 
-        res = method(url, headers, **kwargs)
+        res = method(url, headers=headers, **kwargs)
 
         if delay := res.headers.get("Retry-After"):
             time.sleep(int(delay))
@@ -100,9 +95,12 @@ class MDEClient:
         method: Callable[..., requests.Response],
         value_key: str = "value",
         next_link_key: str = "@odata.nextLink",
-        _data: list[Any] = [],
+        _data: list[Any] | None = None,
         **kwargs,
     ) -> list[Any]:
+        if _data is None:
+            _data = []
+
         json = self._make_request(url, method, **kwargs)
 
         value = json.get(value_key)
@@ -133,9 +131,10 @@ class MDEClient:
     )
     def authenticate(self) -> None:
         """Authenticate client with MDE."""
-        res = self._make_request(
+        json = self._make_request(
             f"https://login.microsoftonline.com/{self.azure_mde_tenant}/oauth2/v2.0/token",
             requests.post,
+            authorized_endpoint=False,
             data={
                 "grant_type": "client_credentials",
                 "client_id": self.azure_mde_client_id,
@@ -145,7 +144,7 @@ class MDEClient:
             timeout=120,
         )
 
-        self.api_token = res["access_token"]
+        return json["access_token"]
 
     @retry(
         stop=stop_after_attempt(5),
@@ -273,6 +272,7 @@ class MDEClient:
             cve_url,
             requests.post,
             json={"Query": kudos_query},
+            value_key="Results",
             timeout=300,
         )
 

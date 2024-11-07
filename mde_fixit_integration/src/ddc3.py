@@ -63,13 +63,13 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
     if not devices:
         logger.info("won't continue as there is no devices to process")
         return
-
-    logger.info('adding "ZZZ" tag to duplicate devices in the MDE')
+    logger.info(f"fetched {len(devices)} devices to process")
 
     device_dict: DeviceDict = create_device_dict(devices)
-
     # Remove devices that only appear once (by name) in the table.
     remove_non_duplicates(device_dict)
+
+    logger.info('adding "ZZZ" tag to duplicate devices in the MDE')
 
     duplicate_devices_tagged = 0
 

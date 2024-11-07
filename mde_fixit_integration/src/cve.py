@@ -28,7 +28,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 8 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=True,
 )
 def cve_automation(myTimer: func.TimerRequest) -> None:
@@ -71,11 +71,13 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     if not devices or len(devices) < 1:
         logger.critical("won't continue as there is no devices to process")
         return
+    logger.info(f"fetched {len(devices)} devices to process")
 
     vulnerabilities: list[MDEVulnerability] = mde_client.get_vulnerabilities()
     if not vulnerabilities or len(vulnerabilities) < 1:
         logger.critical("won't continue as there is no vulnerabilities to process")
         return
+    logger.info(f"fetched {len(vulnerabilities)} vulnerabilities to process")
 
     multi_vulnerable_devices, single_vulnerable_devices = get_vulnerable_devices(
         vulnerabilities,
@@ -202,7 +204,7 @@ def proccess_single_devices(
                 f'failed to give {device} tag "#{ticket_id}"',
                 extra={
                     "device": str(device),
-                    "ticket_tag": ticket_id,
+                    "ticket_id": ticket_id,
                 },
             )
 

@@ -69,6 +69,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
     if not devices or len(devices) < 1:
         logger.critical("task won't continue as there is no devices to process")
         return
+    logger.info(f"fetched {len(devices)} devices to process")
 
     removed_tags = 0
 
