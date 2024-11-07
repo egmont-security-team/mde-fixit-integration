@@ -87,7 +87,7 @@ class MDEClient:
 
         res.raise_for_status()
 
-        return res.json()
+        return res
 
     def _make_paginated_request(
         self,
@@ -101,7 +101,8 @@ class MDEClient:
         if _data is None:
             _data = []
 
-        json = self._make_request(url, method, **kwargs)
+        res = self._make_request(url, method, **kwargs)
+        json = res.json()
 
         value = json.get(value_key)
 
@@ -131,7 +132,7 @@ class MDEClient:
     )
     def authenticate(self) -> None:
         """Authenticate client with MDE."""
-        json = self._make_request(
+        res = self._make_request(
             f"https://login.microsoftonline.com/{self.azure_mde_tenant}/oauth2/v2.0/token",
             requests.post,
             authorized_endpoint=False,
@@ -143,6 +144,8 @@ class MDEClient:
             },
             timeout=120,
         )
+
+        json = res.json()
 
         return json["access_token"]
 
@@ -181,11 +184,11 @@ class MDEClient:
         self._make_request(
             f"https://api.securitycenter.microsoft.com/api/machines/{device.uuid}/tags",
             requests.post,
+            timeout=300,
             json={
                 "Value": tag,
                 "Action": action,
             },
-            timeout=300,
         )
 
         logger.debug(f'performed "{action}" with tag "{tag}" on device {device}')
