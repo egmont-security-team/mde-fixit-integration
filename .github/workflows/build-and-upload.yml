@@ -33,7 +33,7 @@ jobs:
         run: uv pip install --target="./.python_packages/lib/site-packages" -e .
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip ./mde_fixit_ingegration ./.python_packages function_app.py host.json .python-version
+        run: zip -r release.zip ./mde_fixit_integration ./.python_packages function_app.py host.json .python-version
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
