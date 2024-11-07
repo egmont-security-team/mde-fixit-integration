@@ -3,7 +3,8 @@
 import logging
 import re
 from pathlib import Path
-from typing import Any, Optional
+import time
+from typing import Any, Callable, Optional
 
 import requests
 import xmltodict
@@ -23,13 +24,13 @@ class XurrentClient:
 
     base_url: str
     xurrent_account: str
-    api_key: str
+    api_token: str
 
     def __init__(
         self,
         base_url: str,
         xurrent_account: str,
-        api_key: str,
+        api_token: str,
     ) -> None:
         """
         Create a new client to interact with the Xurrent (4me) API.
@@ -40,13 +41,48 @@ class XurrentClient:
             Base URL of the Xurrent REST API.
         xurrent_account : str
             Xurrent account to use.
-        api_key : str
+        api_token : str
             API key to use for the Xurrent client.
 
         """
         self.base_url = base_url
         self.xurrent_account = xurrent_account
-        self.api_key = api_key
+        self.api_token = api_token
+
+    def _make_request(
+        self,
+        endpoint: str,
+        method: Callable[..., requests.Response],
+        authorized_endpoint: bool = True,
+        **kwargs,
+    ) -> requests.Response:
+        headers = {
+            "X-4me-Account": self.xurrent_account,
+        } 
+
+        if authorized_endpoint:
+            headers["Authorization"] = f"Bearer {self.api_token}"
+
+        if extra_headers := kwargs.pop("headers", None):
+            headers.update(extra_headers)
+
+        url = f"{self.base_url}{endpoint}"
+
+        res = method(url, headers, **kwargs)
+
+        if delay := res.headers.get("Retry-After"):
+            time.sleep(int(delay))
+
+            return self._make_request(
+                url,
+                method,
+                authorized_endpoint,
+                **kwargs,
+            )
+
+        res.raise_for_status()
+
+        return res
 
     @staticmethod
     def extract_id(string: str) -> Optional[str]:
@@ -99,12 +135,9 @@ class XurrentClient:
             The status of the ticket.
 
         """
-        res = requests.get(
-            f"{self.base_url}/requests/{ticket_id}",
-            headers={
-                "X-4me-Account": self.xurrent_account,
-                "Authorization": f"Bearer {self.api_key}",
-            },
+        res = self._make_request(
+            f"/requests/{ticket_id}",
+            requests.get,
             timeout=120,
         )
 
@@ -146,14 +179,11 @@ class XurrentClient:
 
         payload.update(kwargs)
 
-        res = requests.post(
-            f"{self.base_url}/requests",
-            headers={
-                "X-4me-Account": self.xurrent_account,
-                "Authorization": f"Bearer {self.api_key}",
-            },
-            json=payload,
+        res = self._make_request(
+            f"/requests",
+            requests.post,
             timeout=300,
+            json=payload,
         )
 
         res.raise_for_status()
@@ -186,15 +216,12 @@ class XurrentClient:
         all_tickets = []
 
         query_filter = f"?{query_filter}" if query_filter else ""
-        url = f"{self.base_url}/requests/open{query_filter}"
+        endpoint = f"/requests/open"
 
         while url:
-            res = requests.get(
-                url,
-                headers={
-                    "X-4me-Account": self.xurrent_account,
-                    "Authorization": f"Bearer {self.api_key}",
-                },
+            res = self._make_request(
+                f"{endpoint}{query_filter}",
+                requests.get,
                 timeout=300,
             )
 
@@ -225,12 +252,9 @@ class XurrentClient:
             Storage information for attachments.
 
         """
-        res = requests.get(
-            f"{self.base_url}/attachments/storage",
-            headers={
-                "X-4me-Account": self.xurrent_account,
-                "Authorization": f"Bearer {self.api_key}",
-            },
+        res = self._make_request(
+            f"/attachments/storage",
+            requests.get,
             timeout=300,
         )
 
@@ -259,8 +283,11 @@ class XurrentClient:
 
             file_name = file_path.split("/")[-1]
 
+            # This is not a Xurrent API endpoint and does
+            # therefore not use "self._make_requests()"
             res = requests.post(
                 storage["upload_uri"],
+                timeout=300,
                 files={
                     "Content-Type": (None, "text/csv"),
                     "acl": (None, s3["acl"]),
@@ -274,7 +301,6 @@ class XurrentClient:
                     "x-amz-signature": (None, s3["x-amz-signature"]),
                     "file": (file_name, file, "text/csv"),
                 },
-                timeout=300,
             )
 
             res.raise_for_status()

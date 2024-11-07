@@ -61,7 +61,7 @@ class MDEClient:
         method: Callable[..., requests.Response],
         authorized_endpoint: bool = True,
         **kwargs,
-    ) -> Any:
+    ) -> requests.Response:
         if authorized_endpoint and self.api_token is None:
             raise ValueError('missing api token; call "authenticate()" first')
 
