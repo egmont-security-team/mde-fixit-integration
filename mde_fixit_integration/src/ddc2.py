@@ -26,7 +26,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 6 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=True,
+    run_on_startup=False,
     use_monitor=True,
 )
 def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
