@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from json import dumps
-from typing import Literal, Optional
+from typing import Any, Callable, Literal, Optional
 
 import requests
 from tenacity import (
@@ -60,6 +60,71 @@ class MDEClient:
         if authenticate:
             self.authenticate()
 
+    def _make_request(
+        self,
+        url: str,
+        method: Callable[..., requests.Response],
+        authorized_endpoint: bool = True,
+        **kwargs,
+    ) -> Any:
+        if authorized_endpoint and self.api_token is None:
+            raise ValueError('missing api token; call "authenticate()" first')
+
+        headers = {} 
+
+        if authorized_endpoint:
+            headers["Authorization"] = f"Bearer {self.api_token}"
+
+        if extra_headers := kwargs.get("headers"):
+            headers.update(extra_headers)
+
+        res = method(url, headers, **kwargs)
+
+        if delay := res.headers.get("Retry-After"):
+            logger.warning(f"request was rate limited; retrying in {delay} seconds")
+
+            time.sleep(int(delay))
+            return self._make_request(
+                url,
+                method,
+                authorized_endpoint,
+                **kwargs,
+            )
+
+        res.raise_for_status()
+
+        return res.json()
+
+    def _make_paginated_request(
+        self,
+        url: str,
+        method: Callable[..., requests.Response],
+        value_key: str = "value",
+        next_link_key: str = "@odata.nextLink",
+        _data: list[Any] = [],
+        **kwargs,
+    ) -> list[Any]:
+        json = self._make_request(url, method, **kwargs)
+
+        value = json.get(value_key)
+
+        if value is None:
+            raise ValueError("wrong value key given")
+
+        _data.extend(value)
+
+        if next_url := json.get(next_link_key):
+            return self._make_paginated_request(
+                next_url,
+                method,
+                value_key,
+                next_link_key,
+                _data,
+                **kwargs,
+            )
+
+        return _data
+
     @retry(
         stop=stop_after_attempt(2),
         wait=wait_fixed(30),
@@ -69,8 +134,9 @@ class MDEClient:
     )
     def authenticate(self) -> None:
         """Authenticate client with MDE."""
-        res = requests.post(
+        res = self._make_request(
             f"https://login.microsoftonline.com/{self.azure_mde_tenant}/oauth2/v2.0/token",
+            requests.post,
             data={
                 "grant_type": "client_credentials",
                 "client_id": self.azure_mde_client_id,
@@ -80,10 +146,7 @@ class MDEClient:
             timeout=120,
         )
 
-        res.raise_for_status()
-
-        json = res.json()
-        self.api_token = json["access_token"]
+        self.api_token = res["access_token"]
 
     @retry(
         stop=stop_after_attempt(5),
@@ -117,9 +180,9 @@ class MDEClient:
             True if it successfully removes the tag.
 
         """
-        res = requests.post(
+        self._make_request(
             f"https://api.securitycenter.microsoft.com/api/machines/{device.uuid}/tags",
-            headers={"Authorization": f"Bearer {self.api_token}"},
+            requests.post,
             json={
                 "Value": tag,
                 "Action": action,
@@ -127,14 +190,7 @@ class MDEClient:
             timeout=300,
         )
 
-        if delay := res.headers.get("Retry-After"):
-            logger.info(f"request was rate limited; retrying in {delay} seconds")
-            time.sleep(int(delay))
-            return self.alter_device_tag(device, tag, action)
-
-        res.raise_for_status()
-
-        logger.info(f'performed "{action}" with tag "{tag}" on device {device}')
+        logger.debug(f'performed "{action}" with tag "{tag}" on device {device}')
 
         return True
 
@@ -153,7 +209,7 @@ class MDEClient:
         """
         Get a list of all devices from MDE.
 
-        This might takes multiples requests, because Microsoft Defender for Endpoint
+        This might takes multiples requests, because MDE
         only allows to fetch 10K devices at a time.
 
         Parameters
@@ -163,62 +219,18 @@ class MDEClient:
 
         Returns
         -------
-            list[MDEDevice]: The machines from Microsoft Defender for Endpoint.
+            list[MDEDevice]: The machines from MDE.
 
         """
-        devices: list[MDEDevice] = []
-
         odata_filter = f"?$filter={odata_filter}" or ""
-        devices_url = (
-            f"https://api.securitycenter.microsoft.com/api/machines{odata_filter}"
+        devices_url = f"https://api.securitycenter.microsoft.com/api/machines{odata_filter}"
+
+        devices_data = self._make_paginated_request(
+            devices_url,
+            requests.get,
         )
 
-        while devices_url:
-            res = requests.get(
-                devices_url,
-                headers={"Authorization": f"Bearer {self.api_token}"},
-                timeout=300,
-            )
-
-            res.raise_for_status()
-
-            json = res.json()
-
-            new_devices = json["value"]
-            logger.debug(f"fetched {len(new_devices)} new devices")
-
-            for payload in new_devices:
-                new_device_id = payload["id"]
-
-                try:
-                    devices.append(
-                        MDEDevice(
-                            uuid=new_device_id,
-                            name=payload["computerDnsName"],
-                            health=payload["healthStatus"],
-                            os=payload["osPlatform"],
-                            onboarding_status=payload["onboardingStatus"],
-                            tags=payload["machineTags"],
-                            first_seen=datetime.fromisoformat(payload["firstSeen"]),
-                        ),
-                    )
-                except ValueError:
-                    logger.warning(
-                        f"failed to create a device from payload for {new_device_id}",
-                        extra={
-                            "payload": dumps(payload),
-                            "device_id": new_device_id,
-                        },
-                    )
-
-            # The Microsoft Defender API has a limit of 10k devices per request.
-            # In case this URL exists, this means that more devices can be fetched.
-            # The URL given here can be used to fetch the next devices.
-            devices_url = json.get("@odata.nextLink")
-
-        logger.info(f"fetched a total of {len(devices)} devices")
-
-        return devices
+        return [MDEDevice.from_payload(d) for d in devices_data]
 
     @retry(
         stop=stop_after_attempt(2),
@@ -237,8 +249,6 @@ class MDEClient:
             list[MDEVulnerability]: The vulnerabilities of the machine.
 
         """
-        vulnerabilities: list[MDEVulnerability] = []
-
         # IMPORTANT: The "DeviceInfo" table is broken and we can't rely on it.
         # If needed to filter in devices, use get_devices as a mapping instead
         # to access devices fields.
@@ -260,52 +270,14 @@ class MDEClient:
 
         cve_url = "https://api.securitycenter.microsoft.com/api/advancedqueries/run"
 
-        while cve_url:
-            res = requests.post(
-                cve_url,
-                headers={"Authorization": f"Bearer {self.api_token}"},
-                json={"Query": kudos_query},
-                timeout=300,
-            )
+        vulnerabilities_data = self._make_paginated_request(
+            cve_url,
+            requests.post,
+            json={"Query": kudos_query},
+            timeout=300,
+        )
 
-            res.raise_for_status()
-
-            json = res.json()
-
-            new_vulnerabilities = json["Results"]
-            logger.info(f"fetched {len(new_vulnerabilities)} new vulnerabilities")
-
-            for payload in new_vulnerabilities:
-                new_vulnerability_id = payload["CveId"]
-
-                try:
-                    vulnerabilities.append(
-                        MDEVulnerability(
-                            cve_id=new_vulnerability_id,
-                            cve_score=payload["CvssScore"],
-                            devices=payload["Devices"],
-                            description=payload["VulnerabilityDescription"],
-                            software_name=payload["SoftwareName"],
-                            software_vendor=payload["SoftwareVendor"],
-                        ),
-                    )
-                except KeyError:
-                    logger.warning(
-                        "failed to create a vulnerability",
-                        extra={
-                            "payload": dumps(payload),
-                            "device_id": new_vulnerability_id,
-                        },
-                    )
-
-            # The Microsoft Defender API has a limit of 8k rows per request.
-            # In case this URL exists, this means that more rows can be fetched.
-            # The URL given here can be used to fetch the next devices.
-            cve_url = json.get("@odata.nextLink")
-
-        logger.info(f"fetched a total of {len(vulnerabilities)} vulnerabilities")
-
-        return vulnerabilities
+        return [MDEVulnerability.from_payload(v) for v in vulnerabilities_data]
 
     @retry(
         stop=stop_after_attempt(5),
@@ -325,31 +297,15 @@ class MDEClient:
             The device users.
 
         """
-        users: list[str] = []
-
         users_url = f"https://api.securitycenter.microsoft.com/api/machines/{device.uuid}/logonusers"
 
-        while users_url:
-            res = requests.get(
-                users_url,
-                headers={"Authorization": f"Bearer {self.api_token}"},
-                timeout=300,
-            )
+        users_data = self._make_paginated_request(
+            users_url,
+            requests.get,
+            timeout=300,
+        )
 
-            res.raise_for_status()
-
-            json = res.json()
-
-            new_users = json["value"]
-            logger.debug(f"fetched {len(new_users)} new users")
-
-            users.extend(user["accountName"] for user in new_users)
-
-            users_url = json.get("@odata.nextLink")
-
-        logger.info(f"fetched a total of {len(users)} users")
-
-        return users
+        return [user["accountName"] for user in users_data]
 
     @retry(
         stop=stop_after_attempt(5),
@@ -378,35 +334,16 @@ class MDEClient:
             The recommendations for the device.
 
         """
-        recommendations = []
-
         odata_filter = f"?$filter={odata_filter}" or ""
         recommendation_url: str = f"https://api-eu.securitycenter.microsoft.com/api/machines/{device.uuid}/recommendations{odata_filter}"
 
-        while recommendation_url:
-            res = requests.get(
-                recommendation_url,
-                headers={"Authorization": f"Bearer {self.api_token}"},
-                timeout=300,
-            )
-
-            res.raise_for_status()
-
-            json = res.json()
-
-            for recommendation in json["value"]:
-                recommendations.append(recommendation["recommendationName"])
-
-            recommendation_url = json.get("@odata.nextLink")
-
-        logger.info(
-            f"fetched a total of {len(recommendations)} recommendation",
-            extra={
-                "device_id": device.uuid,
-            },
+        recommendations_data = self._make_paginated_request(
+            recommendation_url,
+            requests.get,
+            timeout=300,
         )
 
-        return recommendations
+        return [r["recommendationName"] for r in recommendations_data]
 
 
 @dataclass
@@ -463,11 +400,11 @@ class MDEDevice:
 
         """
         return not self.__eq__(other)
-    
+
     def __hash__(self):
         """
         Get a hash of the device.
-        
+
         Returns
         -------
         int
@@ -490,14 +427,16 @@ class MDEDevice:
         return any(os in self.os.lower() for os in server_os)
 
     def should_skip(
-        self, automation: Literal["DDC2", "DDC3", "CVE"], cve: None | str = None,
+        self,
+        automation: Literal["DDC2", "DDC3", "CVE"],
+        cve: None | str = None,
     ) -> bool:
         """
         If the device should be skipped for a given automation.
 
         Automations
         -----------
-        DDC2: The Data Defender task 2 (Cleanup FixIt tags).
+        DDC2: The Data Defender task 2 (Cleanup ticket tags).
 
         DDC3: The Data Defender task 3 (Cleanup ZZZ tags).
 
@@ -543,6 +482,32 @@ class MDEDevice:
                 return True
 
         return False
+    
+    @staticmethod
+    def from_payload(payload: dict[str, Any]) -> MDEDevice:
+        """
+        Get a device from a request payload.
+
+        Parameters
+        ----------
+        payload : dict[str, Any]
+            The request payload.
+
+        Returns
+        -------
+        MDEDevice
+            Returns the device from the payload.
+
+        """
+        return MDEDevice(
+            uuid=payload["id"],
+            name=payload["computerDnsName"],
+            health=payload["healthStatus"],
+            os=payload["osPlatform"],
+            onboarding_status=payload["onboardingStatus"],
+            tags=payload["machineTags"],
+            first_seen=datetime.fromisoformat(payload["firstSeen"]),
+        )
 
 
 @dataclass
@@ -614,7 +579,7 @@ class MDEVulnerability:
     def __hash__(self):
         """
         Get a hash of the vulnerability.
-        
+
         Returns
         -------
         int
@@ -622,3 +587,28 @@ class MDEVulnerability:
 
         """
         return hash(self.cve_id)
+
+    @staticmethod
+    def from_payload(payload: dict[str, Any]) -> MDEVulnerability:
+        """
+        Get a vulnerability from a request payload.
+
+        Parameters
+        ----------
+        payload : dict[str, Any]
+            The request payload.
+
+        Returns
+        -------
+        MDEVulnerability
+            Returns the vulnerability from the payload.
+
+        """
+        return MDEVulnerability(
+            cve_id=payload["CveId"],
+            cve_score=payload["CvssScore"],
+            devices=payload["Devices"],
+            description=payload["VulnerabilityDescription"],
+            software_name=payload["SoftwareName"],
+            software_vendor=payload["SoftwareVendor"],
+        )

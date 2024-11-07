@@ -2,11 +2,9 @@
 DDC2 Azure function.
 
 This module features the Azure function responsible for handling
-Data Defender Cleanup Task 2. Specifically, it removes FixIt tags
+Data Defender Cleanup Task 2. Specifically, it removes ticket tags
 from devices once their associated requests are completed.
 """
-
-__copyright__ = "Copyright (C) 2024 Egmont IT"
 
 from functools import cache
 import logging
@@ -57,7 +55,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
         os.environ["AZURE_MDE_CLIENT_ID"],
         os.environ["AZURE_MDE_SECRET_VALUE"],
     )
-    fixit_client = XurrentClient(
+    xurrent_client = XurrentClient(
         os.environ["XURRENT_BASE_URL"],
         os.environ["XURRENT_ACCOUNT"],
         os.environ["XURRENT_API_KEY"],
@@ -83,9 +81,16 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
             if not ticket_id:
                 continue
 
-            request_status = get_ticket_status(
-                fixit_client, ticket_id, device
-            )
+            request_status = get_ticket_status(xurrent_client, ticket_id)
+
+            if request_status is None:
+                logger.warning(
+                    f"failed to fetch the status of the ticket #{ticket_id}",
+                    extra={
+                        "device": str(device),
+                        "ticket_id": ticket_id,
+                    },
+                )
 
             if request_status != "completed":
                 continue
@@ -100,7 +105,6 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
 def get_ticket_status(
     xurrent_client: XurrentClient,
     ticket_id: str,
-    device: MDEDevice
 ) -> str | None:
     """
     Get status of a ticket.
@@ -111,27 +115,16 @@ def get_ticket_status(
         Client to interact with Xurrent's API.
     ticket_id : str
         ID of the ticket to fetch the status of.
-    device : MDEDevice
-        Device wich is currently being proccesed.
 
     Returns
     -------
-    str
-        The status of the ticket.
-    None
-        If the ticket was not found.
+    str | None
+        The status of the ticket if exists in account.
 
     """
     ticket_status = xurrent_client.get_ticket_status(ticket_id)
 
     if ticket_status is None:
-        logger.warning(
-            f"failed to fetch the status of the ticket #{ticket_id}",
-            extra={
-                "device": str(device),
-                "ticket_id": ticket_id,
-            },
-        )
         return None
 
     return ticket_status

@@ -1,10 +1,10 @@
-"""Contains tests for the FixItClient class."""
+"""Contains tests for the XurrentClient class."""
 
 from mde_fixit_integration.lib.xurrent import XurrentClient
 
 
 def test_extract_id():
-    """Test the FixItClient.extract_id method."""
+    """Test the XurrentClient.extract_id method."""
     valid_tags = ["#7502349", "# 758489712", "#      93557821"]
     for tag in valid_tags:
         assert XurrentClient.extract_id(tag)

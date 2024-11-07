@@ -1,4 +1,4 @@
-"""All functions and classes related to FixIt Xurrent (4me)."""
+"""All functions and classes related to Xurrent (4me)."""
 
 import logging
 import re
@@ -32,16 +32,16 @@ class XurrentClient:
         api_key: str,
     ) -> None:
         """
-        Create a new client to interact with the FixIt API.
+        Create a new client to interact with the Xurrent (4me) API.
 
         Parameters
         ----------
         base_url : str
-            Base URL of the FixIt 4me REST API.
+            Base URL of the Xurrent REST API.
         xurrent_account : str
             Xurrent account to use.
         api_key : str
-            API key to use for the FixIt client.
+            API key to use for the Xurrent client.
 
         """
         self.base_url = base_url
@@ -67,7 +67,7 @@ class XurrentClient:
             The ticket ID from the tag.
 
         """
-        # If this regular expression does not match, it is not a FixIt tag.
+        # If this regular expression does not match, it is not a ticket tag.
         # This also takes care of human error by checking for spaces between
         # the "#" and the numbers
         if not re.fullmatch(r"^#( )*[0-9]+$", string):

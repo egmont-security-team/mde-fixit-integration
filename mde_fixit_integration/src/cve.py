@@ -2,7 +2,7 @@
 CVE Azure function.
 
 This module features the Azure function that takes care of
-the CVE related stuff. This means it is creating FixIt tickets
+the CVE related stuff. This means it is creating tickets
 for devices hit by certain CVEs.
 """
 
@@ -35,12 +35,12 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
     """
     CVE automation.
 
-    This function automatically creates a FixIt tickets for vulnerable devices.
+    This function automatically creates a tickets for vulnerable devices.
     For detailed description of what this does refer to the README.md.
 
     Actions:
-        - Create FixIt tickets for vulnerable devices.
-        - Tags machine after creating FxiIt ticket.
+        - Create tickets for vulnerable devices.
+        - Tags a machine after creating a ticket.
     """
     if myTimer.past_due:
         logger.warning("timer is past due for CVE!")
@@ -57,7 +57,7 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         os.environ["AZURE_MDE_CLIENT_ID"],
         os.environ["AZURE_MDE_SECRET_VALUE"],
     )
-    fixit_client = XurrentClient(
+    xurrent_client = XurrentClient(
         os.environ["XURRENT_BASE_URL"],
         os.environ["XURRENT_ACCOUNT"],
         os.environ["XURRENT_API_KEY"],
@@ -85,13 +85,13 @@ def cve_automation(myTimer: func.TimerRequest) -> None:
         single_vulnerable_devices,
         devices,
         mde_client,
-        fixit_client,
+        xurrent_client,
     )
     multi_tickets_created = proccess_multiple_devices(
         multi_vulnerable_devices,
         devices,
         mde_client,
-        fixit_client,
+        xurrent_client,
     )
 
     total_tickets_created = multi_tickets_created + single_tickets_created
@@ -106,7 +106,7 @@ def proccess_single_devices(
     single_vulnerable_devices: dict[str, MDEVulnerability],
     devices: list[MDEDevice],
     mde_client: MDEClient,
-    fixit_client: XurrentClient,
+    xurrent_client: XurrentClient,
 ) -> int:
     """
     Process single vulnerable devices.
@@ -120,16 +120,16 @@ def proccess_single_devices(
         List of the devices to map against.
     mde_client : MDEClient
         Client to interact with MDE.
-    fixit_client : FixItClient
-        Client to interact with FixIt.
+    xurrent_client : XurrentClient
+        Client to interact with Xurrent.
 
     Returns
     -------
     int
-        The amount of created fixit tickets
+        The amount of created tickets
 
     """
-    single_fixit_tickets: int = 0
+    single_tickets: int = 0
 
     for device_uuid, vulnerability in single_vulnerable_devices.items():
         device = next((dev for dev in devices if dev.uuid == device_uuid), None)
@@ -180,23 +180,23 @@ def proccess_single_devices(
             request_config["team"] = os.environ["CVE_SD_TEAM_ID"]
 
         ticket_id = f"{vulnerability.cve_id} - {vulnerability.cve_score}"
-        fixit_res = fixit_client.create_ticket(
+        ticket_res = xurrent_client.create_ticket(
             f"Security[{ticket_id}]: Single Vulnerable Device",
             **request_config,
         )
 
-        if fixit_res is None:
+        if ticket_res is None:
             logger.error(
-                "did not succesfully create the FixIt request",
+                "did not succesfully create the ticket",
                 extra={
                     "device": str(device),
                 },
             )
             continue
 
-        single_fixit_tickets += 1
+        single_tickets += 1
 
-        ticket_id = fixit_res["id"]
+        ticket_id = ticket_res["id"]
         if not mde_client.alter_device_tag(device, f"#{ticket_id}", "Add"):
             logger.error(
                 f'failed to give {device} tag "#{ticket_id}"',
@@ -206,14 +206,14 @@ def proccess_single_devices(
                 },
             )
 
-    return single_fixit_tickets
+    return single_tickets
 
 
 def proccess_multiple_devices(
     multi_vulnerable_devices: dict[str, MDEVulnerability],
     devices: list[MDEDevice],
     mde_client: MDEClient,
-    fixit_client: XurrentClient,
+    xurrent_client: XurrentClient,
 ) -> int:
     """
     Process multi vulnerable devices.
@@ -227,20 +227,20 @@ def proccess_multiple_devices(
         List of all devices.
     mde_client : MDEClient
         Client to interact with the MDE API.
-    fixit_client : FixItClient
-       Client to interact with the FixIt API.
+    xurrent_client : XurrentClient
+       Client to interact with the Xurrent API.
 
     Returns
     -------
     int
-        The amount of created fixit tickets
+        The amount of created multi tickets
 
     """
-    multi_fixit_tickets: int = 0
+    multi_tickets: int = 0
 
-    fixit_multi_template_id = os.environ["CVE_MULTI_TEMPLATE_ID"]
-    open_multi_requests = fixit_client.list_tickets(
-        query_filter=f"status=assigned&template={fixit_multi_template_id}",
+    multi_template_id = os.environ["CVE_MULTI_TEMPLATE_ID"]
+    open_multi_requests = xurrent_client.list_tickets(
+        query_filter=f"status=assigned&template={multi_template_id}",
     )
 
     for key, vulnerability in multi_vulnerable_devices.items():
@@ -270,7 +270,7 @@ def proccess_multiple_devices(
             if should_skip_device(
                 device,
                 vulnerability.cve_id,
-                check_fixit_ticket=False,
+                check_ticket=False,
             ):
                 continue
 
@@ -281,7 +281,7 @@ def proccess_multiple_devices(
 
         logger.info(f"creating multi ticket for {device}")
 
-        fixit_attachment_key = fixit_client.upload_file(
+        attachment_key = xurrent_client.upload_file(
             create_csv_file(key, vulnerable_devices),
         )
 
@@ -305,7 +305,7 @@ def proccess_multiple_devices(
             """,
             "internal_note_attachments": [
                 {
-                    "key": fixit_attachment_key,
+                    "key": attachment_key,
                 }
             ],
         }
@@ -316,12 +316,12 @@ def proccess_multiple_devices(
             request_config["team"] = os.environ["CVE_MW_TEAM_ID"]
 
         ticket_id = f"{vulnerability.cve_id} - {vulnerability.cve_score}"
-        fixit_res = fixit_client.create_ticket(
+        ticket_res = xurrent_client.create_ticket(
             f"Security[{ticket_id}]: Multiple Vulnerable Devices", 
             **request_config,
         )
 
-        if fixit_res is None:
+        if ticket_res is None:
             logger.error(
                 f"failed to create the ticket for {vulnerability} (MULTI)",
                 extra={
@@ -330,9 +330,9 @@ def proccess_multiple_devices(
             )
             continue
 
-        multi_fixit_tickets += 1
+        multi_tickets += 1
 
-        ticket_id = fixit_res["id"]
+        ticket_id = ticket_res["id"]
         for device in vulnerable_devices:
             if not mde_client.alter_device_tag(device, f"#{ticket_id}", "Add"):
                 logger.error(
@@ -343,7 +343,7 @@ def proccess_multiple_devices(
                     },
                 )
 
-    return multi_fixit_tickets
+    return multi_tickets
 
 
 def get_vulnerable_devices(
@@ -428,7 +428,7 @@ def should_skip_device(
     check_should_skip: bool = True,
     check_health: bool = True,
     check_onboarding_status: bool = True,
-    check_fixit_ticket: bool = True,
+    check_ticket: bool = True,
 ) -> bool:
     """
     Check if a device should be skipped for the CVE automation.
@@ -447,8 +447,8 @@ def should_skip_device(
         If the device should be checked for health status.
     check_onboarding_status : bool
         If the device should be checked for onboarding status.
-    check_fixit_ticket : bool
-        If the device should be checked for FixIt ticket tags.
+    check_ticket : bool
+        If the device should be checked for ticket tags.
 
     Returns
     -------
@@ -464,12 +464,12 @@ def should_skip_device(
 
     # Skip if device is marked for skipping
     if check_should_skip and device.should_skip("CVE", cve=cve_id):
-        logger.debug(f"skipping {device}; tags indicate it should be skipped")
+        logger.debug(f"skipping {device}; marked for skipping")
         return True
 
     # Skip if device is inactive 
     if check_health and device.health == "Inactive":
-        logger.debug(f'skipping {device}; health is "{device.health}"')
+        logger.debug(f"skipping {device}; health is {device.health}")
         return True
 
     # Skip if device is not onboarded yet
@@ -477,8 +477,8 @@ def should_skip_device(
         logger.debug(f"skipping {device}; not onboarded yet")
         return True
 
-    # Skip if has any FixIt tag (does not check of ticket is complete)
-    if check_fixit_ticket and any(XurrentClient.extract_id(tag) for tag in device.tags):
+    # Skip if device has any ticket tags (does not check ticket status)
+    if check_ticket and any(XurrentClient.extract_id(tag) for tag in device.tags):
         logger.debug(f"skipping {device}; has a ticket tag")
         return True
 
@@ -502,7 +502,7 @@ def create_csv_file(file_name: str, devices: list[MDEDevice]) -> str:
     Returns
     -------
     str
-        The key of the file in the FixIt system.
+        The key of the file in attachment storage.
 
     """
     target_dir = os.path.join(tempfile.gettempdir(), "mde_fixit_integration")
