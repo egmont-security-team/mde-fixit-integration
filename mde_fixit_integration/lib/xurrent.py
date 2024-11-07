@@ -24,13 +24,13 @@ class XurrentClient:
 
     base_url: str
     xurrent_account: str
-    api_token: str
+    api_key: str
 
     def __init__(
         self,
         base_url: str,
         xurrent_account: str,
-        api_token: str,
+        api_key: str,
     ) -> None:
         """
         Create a new client to interact with the Xurrent (4me) API.
@@ -41,34 +41,31 @@ class XurrentClient:
             Base URL of the Xurrent REST API.
         xurrent_account : str
             Xurrent account to use.
-        api_token : str
+        api_key : str
             API key to use for the Xurrent client.
 
         """
         self.base_url = base_url
         self.xurrent_account = xurrent_account
-        self.api_token = api_token
+        self.api_key = api_key
 
     def _make_request(
         self,
         endpoint: str,
         method: Callable[..., requests.Response],
-        authorized_endpoint: bool = True,
         **kwargs,
     ) -> requests.Response:
         headers = {
             "X-4me-Account": self.xurrent_account,
-        } 
-
-        if authorized_endpoint:
-            headers["Authorization"] = f"Bearer {self.api_token}"
+            "Authorization": f"Bearer {self.api_key}",
+        }
 
         if extra_headers := kwargs.pop("headers", None):
             headers.update(extra_headers)
 
         url = f"{self.base_url}{endpoint}"
 
-        res = method(url, headers, **kwargs)
+        res = method(url, headers=headers, **kwargs)
 
         if delay := res.headers.get("Retry-After"):
             time.sleep(int(delay))
@@ -76,13 +73,51 @@ class XurrentClient:
             return self._make_request(
                 url,
                 method,
-                authorized_endpoint,
                 **kwargs,
             )
 
         res.raise_for_status()
 
         return res
+
+    def _make_paginated_request(
+        self,
+        endpoint: str,
+        method: Callable[..., requests.Response],
+        _data: list[Any] | None = None,
+        **kwargs,
+    ) -> list[Any]:
+        if _data is None:
+            _data = []
+
+        res = self._make_request(
+            endpoint,
+            method,
+            **kwargs,
+        )
+
+        _data.extend(res.json())
+
+        next_url = next(
+            (
+                link["url"]
+                for link in requests.utils.parse_header_links(
+                    res.headers.get("Link") or ""
+                )
+                if link["rel"] == "next"
+            ),
+            None,
+        )
+
+        if next_url:
+            return self._make_paginated_request(
+                next_url[len(self.base_url):],
+                method,
+                _data,
+                **kwargs,
+            )
+
+        return _data
 
     @staticmethod
     def extract_id(string: str) -> Optional[str]:
@@ -213,34 +248,14 @@ class XurrentClient:
             The list of tickets.
 
         """
-        all_tickets = []
-
         query_filter = f"?{query_filter}" if query_filter else ""
         endpoint = f"/requests/open"
 
-        while url:
-            res = self._make_request(
-                f"{endpoint}{query_filter}",
-                requests.get,
-                timeout=300,
-            )
-
-            res.raise_for_status()
-
-            all_tickets.extend(res.json())
-
-            url = next(
-                (
-                    link["url"]
-                    for link in requests.utils.parse_header_links(
-                        res.headers.get("Link") or "",
-                    )
-                    if link["rel"] == "next"
-                ),
-                None,
-            )
-
-        return all_tickets
+        return self._make_paginated_request(
+            f"{endpoint}{query_filter}",
+            requests.get,
+            timeout=300,
+        )
 
     def get_attachments_storage(self) -> Any:
         """
@@ -297,7 +312,10 @@ class XurrentClient:
                     "x-amz-algorithm": (None, s3["x-amz-algorithm"]),
                     "x-amz-credential": (None, s3["x-amz-credential"]),
                     "x-amz-date": (None, s3["x-amz-date"]),
-                    "x-amz-server-side-encryption": (None, s3["x-amz-server-side-encryption"]),  # noqa: E501
+                    "x-amz-server-side-encryption": (
+                        None,
+                        s3["x-amz-server-side-encryption"],
+                    ),  # noqa: E501
                     "x-amz-signature": (None, s3["x-amz-signature"]),
                     "file": (file_name, file, "text/csv"),
                 },

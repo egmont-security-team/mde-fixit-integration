@@ -85,6 +85,7 @@ def ddc3_automation(myTimer: func.TimerRequest) -> None:
 
             if mde_client.alter_device_tag(device, "ZZZ", "Add"):
                 duplicate_devices_tagged += 1
+                logger.info(f'added "ZZZ" tag to {str(device)}')
 
     logger.info(f"finished tagging {duplicate_devices_tagged} devices")
 

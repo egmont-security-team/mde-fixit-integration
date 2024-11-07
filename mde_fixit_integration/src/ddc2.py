@@ -26,7 +26,7 @@ bp = func.Blueprint()
 @bp.timer_trigger(
     schedule="0 0 6 * * 1-5",
     arg_name="myTimer",
-    run_on_startup=False,
+    run_on_startup=True,
     use_monitor=True,
 )
 def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
@@ -98,6 +98,7 @@ def ddc2_automation(myTimer: func.TimerRequest) -> None:  # noqa: N803
 
             if mde_client.alter_device_tag(device, tag, "Remove"):
                 removed_tags += 1
+                logger.info(f'removed ticket tag from {str(device)}')
 
     logger.info(f"finished removing {removed_tags} tags from devices")
 

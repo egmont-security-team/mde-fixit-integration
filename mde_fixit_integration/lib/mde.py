@@ -62,12 +62,10 @@ class MDEClient:
         authorized_endpoint: bool = True,
         **kwargs,
     ) -> requests.Response:
-        if authorized_endpoint and self.api_token is None:
-            raise ValueError('missing api token; call "authenticate()" first')
 
         headers = {} 
 
-        if authorized_endpoint:
+        if self.api_token:
             headers["Authorization"] = f"Bearer {self.api_token}"
 
         if extra_headers := kwargs.pop("headers", None):
