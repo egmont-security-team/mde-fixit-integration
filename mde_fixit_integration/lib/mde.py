@@ -75,15 +75,14 @@ class MDEClient:
         if authorized_endpoint:
             headers["Authorization"] = f"Bearer {self.api_token}"
 
-        if extra_headers := kwargs.get("headers"):
+        if extra_headers := kwargs.pop("headers", None):
             headers.update(extra_headers)
 
         res = method(url, headers, **kwargs)
 
         if delay := res.headers.get("Retry-After"):
-            logger.warning(f"request was rate limited; retrying in {delay} seconds")
-
             time.sleep(int(delay))
+
             return self._make_request(
                 url,
                 method,
