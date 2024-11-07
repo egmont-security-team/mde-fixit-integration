@@ -29,13 +29,14 @@ class MDEClient:
     azure_mde_tenant: str
     azure_mde_client_id: str
     azure_mde_secret_value: str
-    api_token: None | str
+    api_token: str | None
 
     def __init__(
         self,
         azure_mde_tenant: str,
         azure_mde_client_id: str,
         azure_mde_secret_value: str,
+        authenticate: bool = True,
     ):
         """
         Create a new client to interact with the MDE API.
@@ -48,12 +49,17 @@ class MDEClient:
             Azure client ID for Microsoft Defender for Endpoint.
         azure_mde_secret_value : str
             Azure secret value for Microsoft Defender for Endpoint.
+        authenticate : bool
+            If client should authenticate straight away.
 
         """
         self.azure_mde_tenant = azure_mde_tenant
         self.azure_mde_client_id = azure_mde_client_id
         self.azure_mde_secret_value = azure_mde_secret_value
-        self.api_token = self.authenticate()
+        self.api_token = None
+        
+        if authenticate:
+            self.api_token = self.authenticate()
 
     def _make_request(
         self,
