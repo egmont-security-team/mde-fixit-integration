@@ -33,7 +33,7 @@ jobs:
         run: uv pip install --target="./.python_packages/lib/site-packages" -e .
 
       - name: Zip artifact for deployment
-        run: zip release.zip -r ./* ./.python_packages -x terraform tests .vscode Dockerfile .gitignore README.md
+        run: zip release.zip -r ./mde_fixit_integration ./.python_packages function_app.py host.json pyproject.toml
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
