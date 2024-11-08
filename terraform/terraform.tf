@@ -2,11 +2,11 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 3.115"
+      version = "~> 4"
     }
     github = {
       source  = "integrations/github"
-      version = "~> 6.0"
+      version = "~> 6"
     }
   }
 
@@ -21,6 +21,8 @@ terraform {
 }
 
 provider "azurerm" {
+  subscription_id = "53f9d4ac-74ab-4f7c-bad1-4a0f15b5d425"
+
   features {
     key_vault {
       purge_soft_delete_on_destroy    = true

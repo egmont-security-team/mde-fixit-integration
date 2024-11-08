@@ -67,16 +67,16 @@ resource "azurerm_linux_function_app" "app" {
   storage_account_access_key  = azurerm_storage_account.app_state.primary_access_key
   functions_extension_version = "~4"
 
-  storage_account {
-    access_key   = azurerm_storage_account.app_state.primary_access_key
-    account_name = azurerm_storage_account.app_state.name
-    name         = azurerm_storage_account.app_state.name
-    type         = "AzureFiles"
-    share_name   = "app-state"
-  }
+  client_certificate_enabled    = true
+  client_certificate_mode       = "Required"
+  https_only                    = true
 
   site_config {
+    minimum_tls_version                    = "1.2"
     application_insights_connection_string = azurerm_application_insights.app_logging.connection_string
+    
+    ip_restriction_default_action = "Allow"
+    scm_ip_restriction_default_action = "Allow"
 
     application_stack {
       python_version = "3.11"
@@ -95,7 +95,7 @@ resource "azurerm_linux_function_app" "app" {
   }
 
   app_settings = {
-    "AZURE_CLIENT_ID": azurerm_user_assigned_identity.app.client_id,
+    "AZURE_CLIENT_ID" : azurerm_user_assigned_identity.app.client_id,
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Production",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
     "WEBSITE_RUN_FROM_PACKAGE" : 1,
@@ -106,12 +106,13 @@ resource "azurerm_linux_function_app" "app" {
     "ENABLE_ORYX_BUILD" : 1,
     "KEY_VAULT_NAME" : azurerm_key_vault.prod.name,
     "CVE_THRESHOLD" : 20,
-    "CVE_SERVER_THRESHOLD" : 5,
+    "CVE_SERVER_THRESHOLD" : 500,
   }
 
   lifecycle {
     ignore_changes = [
       tags,
+      app_settings["SCM_DO_BUILD_DURING_DEPLOYMENT"],
       app_settings["WEBSITE_RUN_FROM_PACKAGE"],
       app_settings["CVE_THRESHOLD"],
       app_settings["CVE_SERVER_THRESHOLD"],
@@ -126,16 +127,16 @@ resource "azurerm_linux_function_app_slot" "stag" {
   storage_account_access_key  = azurerm_storage_account.app_state.primary_access_key
   functions_extension_version = "~4"
 
-  storage_account {
-    account_name = azurerm_storage_account.app_state.name
-    access_key   = azurerm_storage_account.app_state.primary_access_key
-    name         = azurerm_storage_account.app_state.name
-    type         = "AzureFiles"
-    share_name   = "app-state"
-  }
+  client_certificate_enabled    = true
+  client_certificate_mode       = "Required"
+  https_only                    = true
 
   site_config {
+    minimum_tls_version                    = "1.2"
     application_insights_connection_string = azurerm_application_insights.app_logging.connection_string
+
+    ip_restriction_default_action = "Allow"
+    scm_ip_restriction_default_action = "Allow"
 
     application_stack {
       python_version = "3.11"
@@ -154,7 +155,7 @@ resource "azurerm_linux_function_app_slot" "stag" {
   }
 
   app_settings = {
-    "AZURE_CLIENT_ID": azurerm_user_assigned_identity.app.client_id,
+    "AZURE_CLIENT_ID" : azurerm_user_assigned_identity.app.client_id,
     "AZURE_FUNCTIONS_ENVIRONMENT" : "Staging",
     "FUNCTIONS_WORKER_RUNTIME" : "python",
     "WEBSITE_RUN_FROM_PACKAGE" : 1,
@@ -171,6 +172,7 @@ resource "azurerm_linux_function_app_slot" "stag" {
   lifecycle {
     ignore_changes = [
       tags,
+      app_settings["SCM_DO_BUILD_DURING_DEPLOYMENT"],
       app_settings["WEBSITE_RUN_FROM_PACKAGE"],
       app_settings["CVE_THRESHOLD"],
       app_settings["CVE_SERVER_THRESHOLD"],
